@@ -4,6 +4,7 @@ using MahjongStats.Data;
 using MahjongStats.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 
 namespace MahjongStats
@@ -56,6 +57,15 @@ namespace MahjongStats
             builder.Services.AddAuthorization();
 
             var app = builder.Build();
+            
+            // Configure forwarded headers for Railway (MUST be before authentication)
+            var forwardedHeadersOptions = new ForwardedHeadersOptions
+            {
+                ForwardedHeaders = ForwardedHeaders.XForwardedProto | ForwardedHeaders.XForwardedHost
+            };
+            forwardedHeadersOptions.KnownNetworks.Clear();
+            forwardedHeadersOptions.KnownProxies.Clear();
+            app.UseForwardedHeaders(forwardedHeadersOptions);
             
             // Initialize database
             using (var scope = app.Services.CreateScope())
