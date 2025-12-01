@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  mahjong-app:
+    build: .
+    ports:
+      - "8080:80"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ConnectionStrings__DefaultConnection=Data Source=/app/data/MahjongStats.db
+      - MahjongTracker__ApiUrl=https://mahjongtracker.com/api/v1
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped

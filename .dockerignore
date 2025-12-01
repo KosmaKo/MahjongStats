@@ -1,0 +1,6 @@
+MahjongStats/
+bin/
+obj/
+.vs/
+*.user
+*.suo

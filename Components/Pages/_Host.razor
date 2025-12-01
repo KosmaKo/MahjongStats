@@ -1,0 +1,47 @@
+﻿@namespace MahjongStats.Pages
+@page "/"
+
+<PageTitle>Home - Mahjong Stats</PageTitle>
+
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8">
+            <h1>Welcome to Mahjong Stats</h1>
+            <p class="lead">A simple web application to track and analyze your Riichi Mahjong game records.</p>
+
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Getting Started</h5>
+                    <p>This application syncs your game records from Mahjong Tracker API and provides detailed statistics.</p>
+                    <ol>
+                        <li>Go to the <a href="/refresh">Refresh</a> page to sync your data with your bearer token</li>
+                        <li>Visit the <a href="/games">Games</a> page to view your game records</li>
+                        <li>Click on any game to expand and view all rounds with detailed information</li>
+                        <li>Use the stats calculator to analyze player performance across games</li>
+                    </ol>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Features</h5>
+                </div>
+                <div class="card-body">
+                    <ul>
+                        <li>View all your Mahjong game records with final standings</li>
+                        <li>Expand games to see detailed round-by-round results with player names and scores</li>
+                        <li>Track riichi declarations and chombo penalties per round</li>
+                        <li>Calculate comprehensive player statistics including win rates and performance metrics</li>
+                        <li>Filter games by date range and player names</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .card {
+        box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    }
+</style>
