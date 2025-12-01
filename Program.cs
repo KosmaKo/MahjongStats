@@ -44,6 +44,7 @@ namespace MahjongStats
             {
                 o.ClientId = builder.Configuration["Google:ClientId"] ?? "";
                 o.ClientSecret = builder.Configuration["Google:ClientSecret"] ?? "";
+                o.CallbackPath = "/signin-google";
                 o.Scope.Clear();
                 o.Scope.Add("openid");
                 o.Scope.Add("profile");
