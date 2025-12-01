@@ -17,9 +17,9 @@ namespace MahjongStats
             
             // Add database context
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                ?? "Server=.;Database=MahjongStats;Trusted_Connection=true;Encrypt=false;";
+                ?? "Data Source=MahjongStats.db";
             builder.Services.AddDbContext<MahjongStatsContext>(options =>
-                options.UseSqlServer(connectionString));
+                options.UseSqlite(connectionString));
 
             builder.Services.AddHttpClient<IMahjongTrackerService, MahjongTrackerService>();
             builder.Services.AddScoped<IGameFilterService, GameFilterService>();
