@@ -20,7 +20,9 @@ namespace MahjongStats
                 .AddInteractiveServerComponents();
             
             // Add database context - supports both SQLite and PostgreSQL
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+            // Priority: Environment variable > appsettings config > default SQLite
+            var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? builder.Configuration.GetConnectionString("DefaultConnection") 
                 ?? "Data Source=/app/data/MahjongStats.db";
             var isDevelopment = builder.Environment.IsDevelopment();
             
@@ -32,10 +34,15 @@ namespace MahjongStats
                 {
                     options.UseNpgsql(connectionString);
                 }
+                else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Data Source", StringComparison.OrdinalIgnoreCase))
+                {
+                    // Default to SQLite only for valid SQLite connection strings
+                    options.UseSqlite(connectionString);
+                }
                 else
                 {
-                    // Default to SQLite for local development or Railway with volume mount
-                    options.UseSqlite(connectionString);
+                    // Fallback to SQLite if connection string format is unclear
+                    options.UseSqlite("Data Source=/app/data/MahjongStats.db");
                 }
             });
 
