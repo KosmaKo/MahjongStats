@@ -140,41 +140,49 @@ namespace MahjongStats
                     var dbContext = scope.ServiceProvider.GetRequiredService<MahjongStatsContext>();
                     Console.WriteLine("[Database] Checking if database needs initialization...");
                     
-                    // Check if tables already exist
-                    var tableExists = dbContext.Database.SqlQuery<int>(
-                        $"SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'StoredGames'")
-                        .FirstOrDefault() > 0;
-                    
-                    if (tableExists)
+                    // Check if tables already exist using raw connection
+                    using (var connection = dbContext.Database.GetDbConnection())
                     {
-                        Console.WriteLine("[Database] Tables already exist, checking migration history...");
-                        
-                        // Check if migration is recorded
-                        var migrationExists = dbContext.Database.SqlQuery<string>(
-                            $"SELECT \"MigrationId\" FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = '20250202000000_InitialCreate'")
-                            .FirstOrDefault() != null;
-                        
-                        if (!migrationExists)
+                        connection.Open();
+                        using (var command = connection.CreateCommand())
                         {
-                            Console.WriteLine("[Database] Tables exist but migration not recorded, recording migration...");
-                            // Record the migration as applied without running it
-                            dbContext.Database.ExecuteSql($"INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20250202000000_InitialCreate', '8.0.0')");
-                            Console.WriteLine("[Database] Migration recorded successfully");
-                        }
-                        else
-                        {
-                            Console.WriteLine("[Database] Migration already recorded, skipping");
-                        }
-                    }
-                    else
-                    {
-                        Console.WriteLine("[Database] Tables don't exist, running migrations...");
-                        var pendingMigrations = dbContext.Database.GetPendingMigrations();
-                        if (pendingMigrations.Any())
-                        {
-                            Console.WriteLine($"[Database] Found {pendingMigrations.Count()} pending migrations, applying...");
-                            dbContext.Database.Migrate();
-                            Console.WriteLine("[Database] Migrations completed successfully");
+                            command.CommandText = "SELECT COUNT(*) FROM information_schema.tables WHERE table_name = 'StoredGames'";
+                            var result = (long?)command.ExecuteScalar() ?? 0;
+                            var tableExists = result > 0;
+                            
+                            if (tableExists)
+                            {
+                                Console.WriteLine("[Database] Tables already exist, checking migration history...");
+                                
+                                // Check if migration is recorded
+                                command.CommandText = "SELECT COUNT(*) FROM \"__EFMigrationsHistory\" WHERE \"MigrationId\" = '20250202000000_InitialCreate'";
+                                var migrationCount = (long?)command.ExecuteScalar() ?? 0;
+                                var migrationExists = migrationCount > 0;
+                                
+                                if (!migrationExists)
+                                {
+                                    Console.WriteLine("[Database] Tables exist but migration not recorded, recording migration...");
+                                    // Record the migration as applied without running it
+                                    command.CommandText = "INSERT INTO \"__EFMigrationsHistory\" (\"MigrationId\", \"ProductVersion\") VALUES ('20250202000000_InitialCreate', '8.0.0')";
+                                    command.ExecuteNonQuery();
+                                    Console.WriteLine("[Database] Migration recorded successfully");
+                                }
+                                else
+                                {
+                                    Console.WriteLine("[Database] Migration already recorded, skipping");
+                                }
+                            }
+                            else
+                            {
+                                Console.WriteLine("[Database] Tables don't exist, running migrations...");
+                                var pendingMigrations = dbContext.Database.GetPendingMigrations();
+                                if (pendingMigrations.Any())
+                                {
+                                    Console.WriteLine($"[Database] Found {pendingMigrations.Count()} pending migrations, applying...");
+                                    dbContext.Database.Migrate();
+                                    Console.WriteLine("[Database] Migrations completed successfully");
+                                }
+                            }
                         }
                     }
                 }
