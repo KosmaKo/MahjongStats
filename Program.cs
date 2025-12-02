@@ -26,22 +26,34 @@ namespace MahjongStats
                 ?? "Data Source=/app/data/MahjongStats.db";
             var isDevelopment = builder.Environment.IsDevelopment();
             
+            // Log connection string details for debugging (first 50 chars to hide credentials)
+            var displayString = string.IsNullOrEmpty(connectionString) 
+                ? "[EMPTY]" 
+                : connectionString.Length > 50 
+                    ? connectionString.Substring(0, 50) + "..." 
+                    : connectionString;
+            Console.WriteLine($"[Database] Using connection string: {displayString}");
+            Console.WriteLine($"[Database] Is Development: {isDevelopment}");
+            
             builder.Services.AddDbContext<MahjongStatsContext>(options =>
             {
                 // Use PostgreSQL if connection string contains "postgresql" or "postgres"
-                if (connectionString.Contains("postgresql", StringComparison.OrdinalIgnoreCase) 
-                    || connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase))
+                if (!string.IsNullOrEmpty(connectionString) && (connectionString.Contains("postgresql", StringComparison.OrdinalIgnoreCase) 
+                    || connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase)))
                 {
+                    Console.WriteLine("[Database] Detected PostgreSQL connection string");
                     options.UseNpgsql(connectionString);
                 }
                 else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Data Source", StringComparison.OrdinalIgnoreCase))
                 {
                     // Default to SQLite only for valid SQLite connection strings
+                    Console.WriteLine("[Database] Detected SQLite connection string");
                     options.UseSqlite(connectionString);
                 }
                 else
                 {
                     // Fallback to SQLite if connection string format is unclear
+                    Console.WriteLine("[Database] Defaulting to SQLite fallback");
                     options.UseSqlite("Data Source=/app/data/MahjongStats.db");
                 }
             });
@@ -89,10 +101,25 @@ namespace MahjongStats
             app.UseForwardedHeaders(forwardedHeadersOptions);
             
             // Initialize database
-            using (var scope = app.Services.CreateScope())
+            try
             {
-                var dbContext = scope.ServiceProvider.GetRequiredService<MahjongStatsContext>();
-                dbContext.Database.Migrate();
+                using (var scope = app.Services.CreateScope())
+                {
+                    var dbContext = scope.ServiceProvider.GetRequiredService<MahjongStatsContext>();
+                    Console.WriteLine("[Database] Attempting to migrate database...");
+                    dbContext.Database.Migrate();
+                    Console.WriteLine("[Database] Migration completed successfully");
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"[Database] Migration failed: {ex.GetType().Name}");
+                Console.WriteLine($"[Database] Error: {ex.Message}");
+                if (ex.InnerException != null)
+                {
+                    Console.WriteLine($"[Database] Inner Error: {ex.InnerException.Message}");
+                }
+                throw;
             }
 
             // Configure the HTTP request pipeline.
