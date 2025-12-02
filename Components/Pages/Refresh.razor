@@ -1,17 +1,70 @@
 @page "/refresh"
 @using MahjongStats.Models
 @using MahjongStats.Services
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
 @inject IMahjongTrackerService MahjongService
 @inject IGameFilterService FilterService
 @inject IDatabaseService DatabaseService
 @inject IConfiguration Configuration
+@inject NavigationManager Navigation
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @rendermode InteractiveServer
 
 <PageTitle>Refresh Data - Mahjong Stats</PageTitle>
 
+@if (!isAuthenticated)
+{
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-4">🔐 Access Restricted</h5>
+                        <p class="text-muted mb-4">You need to sign in with your Google account to access the refresh functionality.</p>
+                        <a href="/auth/login?returnUrl=/refresh" class="btn btn-primary btn-lg">
+                            Sign in with Google
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    return;
+}
+
+@if (!isAuthorized)
+{
+    <div class="container mt-4">
+        <div class="row justify-content-center">
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title mb-4">❌ Access Denied</h5>
+                        <p class="text-muted mb-4">Your email (<strong>@userEmail</strong>) is not authorized to access this page.</p>
+                        <a href="/auth/logout" class="btn btn-secondary">
+                            Sign out
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    return;
+}
+
 <div class="container-fluid mt-4">
-    <h1>🔄 Refresh Data</h1>
-    <p class="text-muted">Sync your Mahjong game data with the API.</p>
+    <div class="d-flex justify-content-between align-items-start mb-4">
+        <div>
+            <h1>🔄 Refresh Data</h1>
+            <p class="text-muted">Sync your Mahjong game data with the API.</p>
+        </div>
+        <div class="text-end">
+            <small class="text-muted d-block mb-2">Signed in as: <strong>@userEmail</strong></small>
+            <a href="/auth/logout" class="btn btn-sm btn-outline-secondary">Sign out</a>
+        </div>
+    </div>
 
     <!-- Status Section -->
     <div class="card mb-4">
@@ -193,20 +246,17 @@
     private int cachedGameCount = 0;
     private int cachedRoundCount = 0;
 
-    private Message newGamesMessage;
-    private Message refreshSinceMessage;
-    private Message missingRoundsMessage;
+    private Message? newGamesMessage;
+    private Message? refreshSinceMessage;
+    private Message? missingRoundsMessage;
 
-    protected override async Task OnInitializedAsync()
+    private void LoadBearerToken()
     {
-        // Load bearer token from config if available
         var token = Configuration["MahjongTracker:BearerToken"];
         if (!string.IsNullOrEmpty(token) && token != "YOUR_BEARER_TOKEN_HERE")
         {
             bearerToken = token;
         }
-
-        await UpdateCacheStats();
     }
 
     private async Task UpdateCacheStats()
@@ -348,6 +398,47 @@
         {
             isLoading = false;
             currentStep = "";
+        }
+    }
+
+    // Authentication state
+    private bool isAuthenticated = false;
+    private bool isAuthorized = false;
+    private string? userEmail = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        LoadBearerToken();
+        await CheckAuthenticationState();
+        await UpdateCacheStats();
+    }
+
+    private async Task CheckAuthenticationState()
+    {
+        try
+        {
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            isAuthenticated = user?.Identity?.IsAuthenticated ?? false;
+
+            if (isAuthenticated)
+            {
+                // Get email from claims
+                userEmail = user?.FindFirst(ClaimTypes.Email)?.Value 
+                    ?? user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value
+                    ?? user?.FindFirst("email")?.Value;
+
+                // Check if email is in whitelist
+                isAuthorized = AuthService.IsUserAuthorized(userEmail);
+            }
+        }
+        catch (Exception ex)
+        {
+            System.Diagnostics.Debug.WriteLine($"Auth check error: {ex.Message}");
+            isAuthenticated = false;
+            isAuthorized = false;
+            userEmail = "";
         }
     }
 }
