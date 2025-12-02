@@ -8,8 +8,8 @@ RUN dotnet publish -c Release -o /app/publish
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 
-# Create data directory for SQLite database
-RUN mkdir -p /app/data
+# Create data directory for SQLite database with proper permissions
+RUN mkdir -p /app/data && chmod 755 /app/data
 
 COPY --from=build /app/publish .
 EXPOSE 80

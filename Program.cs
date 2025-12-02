@@ -19,11 +19,25 @@ namespace MahjongStats
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
             
-            // Add database context
+            // Add database context - supports both SQLite and PostgreSQL
             var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-                ?? "Data Source=MahjongStats.db";
+                ?? "Data Source=/app/data/MahjongStats.db";
+            var isDevelopment = builder.Environment.IsDevelopment();
+            
             builder.Services.AddDbContext<MahjongStatsContext>(options =>
-                options.UseSqlite(connectionString));
+            {
+                // Use PostgreSQL if connection string contains "postgresql" or "postgres"
+                if (connectionString.Contains("postgresql", StringComparison.OrdinalIgnoreCase) 
+                    || connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase))
+                {
+                    options.UseNpgsql(connectionString);
+                }
+                else
+                {
+                    // Default to SQLite for local development or Railway with volume mount
+                    options.UseSqlite(connectionString);
+                }
+            });
 
             builder.Services.AddHttpClient<IMahjongTrackerService, MahjongTrackerService>();
             builder.Services.AddScoped<IGameFilterService, GameFilterService>();
