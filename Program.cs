@@ -145,13 +145,21 @@ namespace MahjongStats
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"[Database] Migration failed: {ex.GetType().Name}");
-                Console.WriteLine($"[Database] Error: {ex.Message}");
-                if (ex.InnerException != null)
+                // Check if it's a "relation already exists" error (tables already created)
+                if (ex.InnerException is Npgsql.PostgresException pgEx && pgEx.SqlState == "42P07")
                 {
-                    Console.WriteLine($"[Database] Inner Error: {ex.InnerException.Message}");
+                    Console.WriteLine("[Database] Tables already exist, skipping migration");
                 }
-                throw;
+                else
+                {
+                    Console.WriteLine($"[Database] Migration failed: {ex.GetType().Name}");
+                    Console.WriteLine($"[Database] Error: {ex.Message}");
+                    if (ex.InnerException != null)
+                    {
+                        Console.WriteLine($"[Database] Inner Error: {ex.InnerException.Message}");
+                    }
+                    throw;
+                }
             }
 
             // Configure the HTTP request pipeline.
