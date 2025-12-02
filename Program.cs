@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
+using Npgsql;
 
 namespace MahjongStats
 {
@@ -42,7 +43,38 @@ namespace MahjongStats
                     || connectionString.Contains("postgres", StringComparison.OrdinalIgnoreCase)))
                 {
                     Console.WriteLine("[Database] Detected PostgreSQL connection string");
-                    options.UseNpgsql(connectionString);
+                    try
+                    {
+                        // If it's a URI (starts with postgresql://), convert it to Npgsql connection string format
+                        if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+                        {
+                            Console.WriteLine("[Database] Converting PostgreSQL URI to connection string format");
+                            var uri = new Uri(connectionString);
+                            var connStrBuilder = new NpgsqlConnectionStringBuilder
+                            {
+                                Host = uri.Host,
+                                Port = uri.Port > 0 ? uri.Port : 5432,
+                                Database = uri.AbsolutePath.TrimStart('/'),
+                                Username = uri.UserInfo?.Split(':')[0],
+                                Password = uri.UserInfo?.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : null,
+                                SslMode = SslMode.Require
+                            };
+                            var convertedConnectionString = connStrBuilder.ConnectionString;
+                            Console.WriteLine($"[Database] Converted connection string: {convertedConnectionString.Substring(0, Math.Min(50, convertedConnectionString.Length))}...");
+                            options.UseNpgsql(convertedConnectionString);
+                        }
+                        else
+                        {
+                            // Already in connection string format
+                            Console.WriteLine("[Database] Using connection string as-is");
+                            options.UseNpgsql(connectionString);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Console.WriteLine($"[Database] Error parsing PostgreSQL connection: {ex.Message}");
+                        throw;
+                    }
                 }
                 else if (!string.IsNullOrEmpty(connectionString) && connectionString.Contains("Data Source", StringComparison.OrdinalIgnoreCase))
                 {
