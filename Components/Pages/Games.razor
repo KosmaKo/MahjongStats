@@ -5,6 +5,7 @@
 @inject IPlayerStatsService StatsService
 @inject IDatabaseService DatabaseService
 @rendermode InteractiveServer
+@implements IAsyncDisposable
 
 <PageTitle>Mahjong Statistics</PageTitle>
 
@@ -17,70 +18,78 @@
     {
         <div class="alert alert-info">
             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-            Please be patient, the data is loading, it might take a moment
+            Loading game data. This may take a moment...
         </div>
     }
-    else if (games.Count == 0)
+    else if (games.Count == 0 && filteredGames.Count == 0)
     {
         <div class="alert alert-warning alert-dismissible fade show" role="alert">
-            <strong>No data loaded!</strong> 
-            Go to the <a href="/refresh" class="alert-link">Refresh</a> page to fetch your games first.
+            <strong>📍 Get Started:</strong> 
+            Enter at least one player name below and click "Apply Filters" to search for games. This helps manage the large database efficiently.
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-    else
+    else if (games.Count > 0 && filteredGames.Count == 0)
     {
         <div class="alert alert-info alert-dismissible fade show" role="alert">
-            <strong>✓ Data loaded:</strong> @games.Count games from database
+            <strong>ℹ️ No matches:</strong> 
+            No games found for the selected player(s) and date range. Try different filters.
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    else if (games.Count > 0)
+    {
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            <strong>✓ Data loaded:</strong> @games.Count games loaded, showing @filteredGames.Count
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
 
     <!-- Filter Section -->
-    @if (games != null && games.Count > 0)
-    {
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Filters</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <!-- Date Filters -->
-                    <div class="col-md-6">
-                        <label class="form-label">Date Range</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label small">Min Date (optional)</label>
-                                <input type="date" class="form-control" @bind="minDateFilter">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small">Max Date (optional)</label>
-                                <input type="date" class="form-control" @bind="maxDateFilter">
-                            </div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">🔍 Search Games</h5>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <!-- Date Filters -->
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Date Range (optional)</strong></label>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <label class="form-label small">Min Date</label>
+                            <input type="date" class="form-control" @bind="minDateFilter">
                         </div>
-                    </div>
-
-                    <!-- Player Filters -->
-                    <div class="col-md-6">
-                        <label class="form-label">Filter by Players (up to 4, case-insensitive substring)</label>
-                        @for (int i = 0; i < 4; i++)
-                        {
-                            var index = i;
-                            <input type="text" class="form-control mb-2" placeholder="Player @(i + 1) name (optional)" @bind="playerFilters[index]">
-                        }
+                        <div class="col-md-6">
+                            <label class="form-label small">Max Date</label>
+                            <input type="date" class="form-control" @bind="maxDateFilter">
+                        </div>
                     </div>
                 </div>
 
-                <button class="btn btn-success mt-3" @onclick="ApplyFilters">
-                    Apply Filters
-                </button>
-                <button class="btn btn-secondary mt-3 ms-2" @onclick="ClearFilters">
-                    Clear Filters
-                </button>
+                <!-- Player Filters -->
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Player Names (required: at least 1)</strong></label>
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        var index = i;
+                        <input type="text" class="form-control mb-2" placeholder="Player @(i + 1) name" @bind="playerFilters[index]">
+                    }
+                </div>
             </div>
-        </div>
 
-        <!-- Games Stats -->
+            <button class="btn btn-success mt-3" @onclick="async () => await ApplyFilters()">
+                Apply Filters
+            </button>
+            <button class="btn btn-secondary mt-3 ms-2" @onclick="ClearFilters">
+                Clear Filters
+            </button>
+        </div>
+    </div>
+
+    <!-- Games Stats -->
+    @if (games.Count > 0)
+    {
         <div class="alert alert-info">
             <strong>Games:</strong> Showing @filteredGames.Count of @games.Count games
             @if (!string.IsNullOrEmpty(filterSummary))
@@ -89,8 +98,11 @@
                 <strong>Active Filters:</strong> @filterSummary
             }
         </div>
+    }
 
-        <!-- Player Stats Section -->
+    <!-- Player Stats Section -->
+    @if (games.Count > 0)
+    {
         <div class="card mb-4">
             <div class="card-header" style="background-color: #28a745; color: white;">
                 <h5 class="card-title mb-0">📈 Calculate Player Stats</h5>
@@ -194,8 +206,11 @@
                 }
             </div>
         </div>
+    }
 
-        <!-- Games Grid -->
+    <!-- Games Grid -->
+    @if (games.Count > 0)
+    {
         <div class="card mb-4">
             <div class="card-header">
                 <h5 class="card-title mb-0">Game Records</h5>
@@ -228,7 +243,7 @@
                                         </td>
                                         <td>@(game.Round ?? "-")</td>
                                         <td>
-                                            @if (gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
+                                            @if (game.Id != null && gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
                                             {
                                                 <span class="badge bg-success">@gameRoundsMap[game.Id].Count Rounds</span>
                                             }
@@ -238,7 +253,7 @@
                                             }
                                         </td>
                                     </tr>
-                                    @if (expandedGameId == game.Id && gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
+                                    @if (expandedGameId == game.Id && game.Id != null && gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
                                     {
                                         <tr class="table-active">
                                             <td colspan="4">
@@ -328,7 +343,7 @@
                                                                 </tr>
                                                             </thead>
                                                             <tbody>
-                                                                @foreach (var round in gameRoundsMap[game.Id])
+                                                                @foreach (var round in gameRoundsMap[game.Id!])
                                                                 {
                                                                     <tr>
                                                                         <td><small>@round.Round</small></td>
@@ -445,13 +460,10 @@
     {
         try
         {
-            // Load games from database
-            games = await DatabaseService.GetAllGamesAsync();
-            filteredGames = games;
-            
-            // Load rounds map to check game status
-            var allRounds = await DatabaseService.GetAllRoundsAsync();
-            gameRoundsMap = new Dictionary<string, List<RoundDetail>>(allRounds);
+            // Don't load games initially - require player filter first
+            games = new();
+            filteredGames = new();
+            gameRoundsMap = new();
         }
         finally
         {
@@ -467,15 +479,39 @@
         expandedGameId = expandedGameId == gameId ? null : gameId;
     }
 
-    private void ApplyFilters()
+    private async Task ApplyFilters()
     {
-        if (games == null || games.Count == 0)
-            return;
-
         // Get non-empty player filters
         var playerNames = playerFilters
             .Where(p => !string.IsNullOrWhiteSpace(p))
             .ToList();
+
+        // REQUIRE at least one player filter
+        if (playerNames.Count == 0)
+        {
+            filterSummary = "⚠️ Please enter at least one player name to search for games";
+            // Clear old data when invalid filter
+            ClearGameData();
+            return;
+        }
+
+        // Load games only when needed with player filter
+        if (games == null || games.Count == 0)
+        {
+            isLoadingGames = true;
+            try
+            {
+                games = await DatabaseService.GetAllGamesAsync();
+                
+                // Load rounds map to check game status
+                var allRounds = await DatabaseService.GetAllRoundsAsync();
+                gameRoundsMap = new Dictionary<string, List<RoundDetail>>(allRounds);
+            }
+            finally
+            {
+                isLoadingGames = false;
+            }
+        }
 
         // Apply filters
         filteredGames = FilterService.FilterGames(
@@ -491,19 +527,68 @@
             summaryParts.Add($"From {minDateFilter:yyyy-MM-dd}");
         if (maxDateFilter.HasValue)
             summaryParts.Add($"Until {maxDateFilter:yyyy-MM-dd}");
-        if (playerNames.Count > 0)
-            summaryParts.Add($"Players: {string.Join(", ", playerNames)}");
+        summaryParts.Add($"Players: {string.Join(", ", playerNames)}");
 
-        filterSummary = summaryParts.Count > 0 ? string.Join(" | ", summaryParts) : "";
+        filterSummary = string.Join(" | ", summaryParts);
+        
+        // Reset stats when applying new filters
+        currentStats = null;
+        statsPlayerName = "";
+        statsError = "";
+        expandedGameId = null;
     }
 
     private void ClearFilters()
     {
-        minDateFilter = null;
+        minDateFilter = new DateTime(2025, 1, 1);
         maxDateFilter = null;
         playerFilters = new() { "", "", "", "" };
         filterSummary = "";
-        filteredGames = games;
+        ClearGameData();
+    }
+
+    /// <summary>
+    /// Deallocates game data from memory. Called when clearing filters or applying new filters.
+    /// Each user session has its own instance, so this safely clears only current user's data.
+    /// </summary>
+    private void ClearGameData()
+    {
+        // Clear game data to free memory
+        if (games != null && games.Count > 0)
+        {
+            games.Clear();
+            games = null;
+        }
+        
+        // Clear filtered results
+        if (filteredGames != null && filteredGames.Count > 0)
+        {
+            filteredGames.Clear();
+            filteredGames = null;
+        }
+        
+        // Clear rounds cache
+        if (gameRoundsMap != null && gameRoundsMap.Count > 0)
+        {
+            gameRoundsMap.Clear();
+            gameRoundsMap = null;
+        }
+        
+        // Clear UI state
+        expandedGameId = null;
+        currentStats = null;
+        statsPlayerName = "";
+        statsError = "";
+    }
+
+    /// <summary>
+    /// Cleanup when user leaves the page. Blazor Server will call this automatically.
+    /// </summary>
+    async ValueTask IAsyncDisposable.DisposeAsync()
+    {
+        // Deallocate all data when component is disposed
+        ClearGameData();
+        await Task.CompletedTask;
     }
 
     private async Task CalculateStats()
