@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
+using Npgsql;
 
 namespace MahjongStats
 {
@@ -22,11 +23,41 @@ namespace MahjongStats
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
 
-            // Add database context
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
-                ?? "Data Source=MahjongStats.db";
+            // PostgreSQL database configuration
+            var connectionString = Environment.GetEnvironmentVariable("DATABASE_URL")
+                ?? builder.Configuration.GetConnectionString("DefaultConnection");
+            
+            if (string.IsNullOrEmpty(connectionString))
+            {
+                throw new InvalidOperationException("Database connection string not found. Set DATABASE_URL environment variable or DefaultConnection in appsettings.json");
+            }
+
+            Console.WriteLine($"[Database] Connection string detected: {connectionString.Substring(0, Math.Min(50, connectionString.Length))}...");
+
             builder.Services.AddDbContext<MahjongStatsContext>(options =>
-                options.UseSqlite(connectionString));
+            {
+                // Parse PostgreSQL URI format (postgresql://user:pass@host:port/db)
+                if (connectionString.StartsWith("postgresql://", StringComparison.OrdinalIgnoreCase))
+                {
+                    var uri = new Uri(connectionString);
+                    var connBuilder = new NpgsqlConnectionStringBuilder
+                    {
+                        Host = uri.Host,
+                        Port = uri.Port > 0 ? uri.Port : 5432,
+                        Database = uri.AbsolutePath.TrimStart('/'),
+                        Username = uri.UserInfo?.Split(':')[0],
+                        Password = uri.UserInfo?.Split(':').Length > 1 ? uri.UserInfo.Split(':')[1] : null,
+                        SslMode = SslMode.Require
+                    };
+                    Console.WriteLine("[Database] Using PostgreSQL with URI format");
+                    options.UseNpgsql(connBuilder.ConnectionString);
+                }
+                else
+                {
+                    Console.WriteLine("[Database] Using PostgreSQL with connection string format");
+                    options.UseNpgsql(connectionString);
+                }
+            });
 
             builder.Services.AddHttpClient<IMahjongTrackerService, MahjongTrackerService>();
             builder.Services.AddScoped<IGameFilterService, GameFilterService>();
