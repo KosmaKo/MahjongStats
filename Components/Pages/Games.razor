@@ -1,3 +1,4 @@
+@page "/"
 @page "/games"
 @using MahjongStats.Models
 @using MahjongStats.Services
@@ -102,7 +103,7 @@
         try
         {
             games = await DatabaseService.GetAllGamesAsync();
-            filteredGames = games;
+            filteredGames = games.OrderByDescending(g => g.CreatedAt).ToList();
             
             var allRounds = await DatabaseService.GetAllRoundsAsync();
             gameRoundsMap = new Dictionary<string, List<RoundDetail>>(allRounds);
@@ -128,7 +129,8 @@
         if (games == null || games.Count == 0) return;
 
         var playerNames = playerFilters.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
-        filteredGames = FilterService.FilterGames(games, minDateFilter, maxDateFilter, playerNames.Count > 0 ? playerNames : null);
+        filteredGames = FilterService.FilterGames(games, minDateFilter, maxDateFilter, playerNames.Count > 0 ? playerNames : null)
+            .OrderByDescending(g => g.CreatedAt).ToList();
 
         var summaryParts = new List<string>();
         if (minDateFilter.HasValue) summaryParts.Add($"From {minDateFilter:yyyy-MM-dd}");
@@ -147,7 +149,7 @@
         maxDateFilter = null;
         playerFilters = new() { "", "", "", "" };
         filterSummary = "";
-        filteredGames = games;
+        filteredGames = games.OrderByDescending(g => g.CreatedAt).ToList();
         playerStats.Clear();
         overallResults = null;
     }
@@ -221,6 +223,7 @@
     private void ToggleGameExpanded(string? gameId)
     {
         expandedGameId = expandedGameId == gameId ? null : gameId;
+        StateHasChanged();
     }
 
     private string GetPlayerNameBySeat(MahjongGame game, string? seat)

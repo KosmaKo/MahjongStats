@@ -17,14 +17,14 @@
                             <tr>
                                 <th>Date/Time</th>
                                 <th>Players</th>
-                                <th>Round</th>
                                 <th>Status</th>
                             </tr>
                         </thead>
                         <tbody>
                             @foreach (var game in FilteredGames)
                             {
-                                <tr style="cursor: pointer;" @onclick="() => OnToggleGame.InvokeAsync(game.Id)">
+                                var isGameExpanded = expandedGameId == game.Id;
+                                <tr style="cursor: pointer;" @onclick="@(() => ToggleGame(game.Id))">
                                     <td>
                                         <small>@game.CreatedDateTime.ToString("yyyy-MM-dd HH:mm")</small>
                                     </td>
@@ -34,9 +34,8 @@
                                             <span class="badge bg-secondary me-1">@player.Name</span>
                                         }
                                     </td>
-                                    <td>@(game.Round ?? "-")</td>
                                     <td>
-                                        @if (GameRoundsMap.ContainsKey(game.Id) && GameRoundsMap[game.Id].Count > 0)
+                                        @if (game.Id != null && GameRoundsMap.ContainsKey(game.Id) && GameRoundsMap[game.Id].Count > 0)
                                         {
                                             <span class="badge bg-success">@GameRoundsMap[game.Id].Count Rounds</span>
                                         }
@@ -46,10 +45,10 @@
                                         }
                                     </td>
                                 </tr>
-                                @if (ExpandedGameId == game.Id && GameRoundsMap.ContainsKey(game.Id) && GameRoundsMap[game.Id].Count > 0)
+                                @if (game.Id != null && GameRoundsMap.ContainsKey(game.Id) && GameRoundsMap[game.Id].Count > 0)
                                 {
-                                    <tr class="table-active">
-                                        <td colspan="4">
+                                    <tr class="table-active" style="display: @(isGameExpanded ? "table-row" : "none")">
+                                        <td colspan="3">
                                             <div class="p-3">
                                                 <h6 class="mb-3">Game Summary - Final Standings</h6>
                                                 <div class="table-responsive mb-4">
@@ -129,7 +128,6 @@
                                                                 <th>Round</th>
                                                                 <th>Outcome</th>
                                                                 <th>Winner/Loser</th>
-                                                                <th>Score</th>
                                                                 <th>Points</th>
                                                             </tr>
                                                         </thead>
@@ -158,18 +156,6 @@
                                                                             {
                                                                                 var winnerName = GetPlayerNameBySeat(game, round.Data?.WinnerSeat);
                                                                                 <span class="text-success"><strong>W:</strong> @winnerName</span>
-                                                                            }
-                                                                            else
-                                                                            {
-                                                                                <span class="text-muted">-</span>
-                                                                            }
-                                                                        </small>
-                                                                    </td>
-                                                                    <td>
-                                                                        <small>
-                                                                            @if (round.Data?.Score != null)
-                                                                            {
-                                                                                <span>@round.Data.Score.Han Han @(round.Data.Score.Fu ?? 0) Fu</span>
                                                                             }
                                                                             else
                                                                             {
@@ -237,10 +223,18 @@
     [Parameter] public string? ExpandedGameId { get; set; }
     [Parameter] public EventCallback<string?> OnToggleGame { get; set; }
 
+    private string? expandedGameId;
+
     private async Task ToggleExpanded()
     {
         IsExpanded = !IsExpanded;
         await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+
+    private void ToggleGame(string? gameId)
+    {
+        expandedGameId = expandedGameId == gameId ? null : gameId;
+        StateHasChanged();
     }
 
     private string GetPlayerNameBySeat(MahjongGame game, string? seat)
@@ -268,5 +262,10 @@
         }
 
         return seat;
+    }
+
+    private async Task HandleToggleGame(string? gameId)
+    {
+        await OnToggleGame.InvokeAsync(gameId);
     }
 }
