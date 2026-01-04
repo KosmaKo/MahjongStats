@@ -24,7 +24,15 @@ public class MahjongStatsContext : DbContext
             entity.Property(e => e.GameId).IsRequired();
             entity.Property(e => e.Players).IsRequired();
             entity.Property(e => e.PointsJson).IsRequired();
-            entity.Property(e => e.CreatedDateTime).IsRequired();
+            entity.Property(e => e.CreatedDateTime)
+                .IsRequired()
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
+            entity.Property(e => e.FetchedDateTime)
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             entity.HasIndex(e => e.GameId).IsUnique();
             entity.HasIndex(e => e.CreatedDateTime);
         });
@@ -35,6 +43,10 @@ public class MahjongStatsContext : DbContext
             entity.HasKey(e => e.Id);
             entity.Property(e => e.GameId).IsRequired();
             entity.Property(e => e.RoundJson).IsRequired();
+            entity.Property(e => e.CreatedDateTime)
+                .HasConversion(
+                    v => v.Kind == DateTimeKind.Utc ? v : v.ToUniversalTime(),
+                    v => DateTime.SpecifyKind(v, DateTimeKind.Utc));
             entity.HasIndex(e => e.GameId);
         });
     }

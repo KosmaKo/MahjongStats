@@ -67,7 +67,7 @@ public class DatabaseService : IDatabaseService
                     GameId = game.Id,
                     Players = playersString,
                     PointsJson = pointsJson,
-                    CreatedDateTime = game.CreatedDateTime,
+                    CreatedDateTime = DateTime.SpecifyKind(game.CreatedDateTime, DateTimeKind.Utc),
                     FetchedDateTime = DateTime.UtcNow
                 };
                 newGames.Add(storedGame);
@@ -154,7 +154,7 @@ public class DatabaseService : IDatabaseService
                     GameId = game.Id,
                     Players = playersString,
                     PointsJson = pointsJson,
-                    CreatedDateTime = game.CreatedDateTime,
+                    CreatedDateTime = DateTime.SpecifyKind(game.CreatedDateTime, DateTimeKind.Utc),
                     FetchedDateTime = DateTime.UtcNow
                 };
                 newGames.Add(storedGame);
@@ -410,9 +410,12 @@ public class DatabaseService : IDatabaseService
     {
         try
         {
+            // Ensure date is UTC for PostgreSQL
+            var utcDate = date.Kind == DateTimeKind.Utc ? date : DateTime.SpecifyKind(date, DateTimeKind.Utc);
+            
             // Get games created after the specified date
             var gamesToDelete = await _context.StoredGames
-                .Where(g => g.CreatedDateTime > date)
+                .Where(g => g.CreatedDateTime > utcDate)
                 .ToListAsync();
 
             if (gamesToDelete.Any())

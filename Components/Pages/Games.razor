@@ -123,7 +123,7 @@
         minDateFilter = new DateTime(2025, 1, 1);
     }
 
-    private void ApplyFilters()
+    private async Task ApplyFilters()
     {
         if (games == null || games.Count == 0) return;
 
@@ -136,8 +136,8 @@
         if (playerNames.Count > 0) summaryParts.Add($"Players: {string.Join(", ", playerNames)}");
         filterSummary = summaryParts.Count > 0 ? string.Join(" | ", summaryParts) : "";
         
-        _ = CalculateStatsForFilteredPlayers(playerNames);
-        if (playerNames.Count > 0) _ = CalculateOverallResults(playerNames);
+        await CalculateStatsForFilteredPlayers(playerNames);
+        if (playerNames.Count > 0) await CalculateOverallResults(playerNames);
         else overallResults = null;
     }
 
@@ -162,6 +162,7 @@
 
         isLoadingStats = true;
         playerStats.Clear();
+        StateHasChanged();
         
         try
         {
@@ -174,6 +175,7 @@
         finally
         {
             isLoadingStats = false;
+            StateHasChanged();
         }
     }
 
