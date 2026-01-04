@@ -13,6 +13,9 @@ namespace MahjongStats
     {
         public static async Task Main(string[] args)
         {
+            // Load .env file if it exists
+            DotNetEnv.Env.Load();
+            
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
