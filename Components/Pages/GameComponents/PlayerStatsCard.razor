@@ -1,0 +1,143 @@
+@using MahjongStats.Models
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6>Performance</h6>
+                <p class="mb-1">
+                    <small><strong>Avg Rank:</strong></small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.AverageRank.ToString("F2")</span>
+                </p>
+                <p class="mb-1">
+                    <small><strong>Avg Points:</strong></small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.AveragePoints.ToString("F0")</span>
+                </p>
+                <p class="mb-0">
+                    <small><strong>Win Rate:</strong></small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.WinningRate.ToString("F1")%</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6>Winning Patterns</h6>
+                <p class="mb-1">
+                    <small>
+                        <strong>Tsumo Rate:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Tsumo Rate</strong><br/>
+                                Percentage of winning hands that are self-drawn (Tsumo) vs winning off someone's discard (Ron). 
+                                Higher rate indicates better ability to win by self-draw.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.TsumoRate.ToString("F1")%</span>
+                </p>
+                <p class="mb-1">
+                    <small>
+                        <strong>Yakitori Rate:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Yakitori Rate</strong><br/>
+                                Percentage of games where the player failed to win any hands (going 'Yakitori'). 
+                                Lower is better - indicates consistent ability to win at least one hand per game.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.YakitoriRate.ToString("F1")%</span>
+                </p>
+                <p class="mb-0">
+                    <small>
+                        <strong>Deal-In Rate:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Deal-In Rate</strong><br/>
+                                Percentage of rounds where the player dealt into an opponent's winning hand. 
+                                Lower is better - indicates defensive skill and avoiding dangerous discards.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.DealInRate.ToString("F1")%</span>
+                </p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card bg-light">
+            <div class="card-body">
+                <h6>
+                    Dealer Performance
+                    <span class="info-icon">
+                        ?
+                        <span class="tooltip-text">
+                            <strong>Dealer Performance</strong><br/>
+                            This section focuses on specific aspects of the game when the player is the dealer (Oya).
+                        </span>
+                    </span>
+                </h6>
+                <p class="mb-1">
+                    <small>
+                        <strong>Opponent Tsumo on Oya:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Opponent Tsumo on Player's Oya</strong><br/>
+                                Percentage of rounds that end with an opponent's Tsumo when the player is the dealer. 
+                                Higher means opponents are successfully winning by self-draw against the player as dealer - unlucky.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.TsumoRateOnOya.ToString("F1")%</span>
+                </p>
+                <p class="mb-1">
+                    <small>
+                        <strong>Opponent's Tsumo is Mangan+:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Opponent's Tsumo is Mangan+</strong><br/>
+                                Percentage of opponent Tsumo wins on the player's Oya that are at least Mangan (3 han or 5+ han). 
+                                Higher means opponents are winning by self-draw against the player as dealer with fairly high-value hands.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.ManganPlusTsumoRateOnOya.ToString("F1")%</span>
+                </p>
+                <p class="mb-0">
+                    <small>
+                        <strong>Opponent's Tsumo is Haneman+:</strong>
+                        <span class="info-icon">
+                            ?
+                            <span class="tooltip-text">
+                                <strong>Opponent's Tsumo is Haneman+</strong><br/>
+                                Percentage of opponent Tsumo wins on the player's Oya that are at least Haneman (6-7 han). 
+                                Higher means opponents are winning by self-draw against the player as dealer with fairly high-value hands.
+                            </span>
+                        </span>
+                    </small>
+                    <br/>
+                    <span style="font-size: 1.3em;">@Stats.HanemanPlusTsumoRateOnOya.ToString("F1")%</span>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public PlayerStats Stats { get; set; } = null!;
+}

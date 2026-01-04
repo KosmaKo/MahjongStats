@@ -1,0 +1,78 @@
+@using MahjongStats.Models
+
+<div class="card mb-4">
+    <div class="card-header" style="cursor: pointer;" @onclick="ToggleExpanded">
+        <h5 class="card-title mb-0">
+            @(IsExpanded ? "▼" : "▶") Filters
+        </h5>
+    </div>
+    @if (IsExpanded)
+    {
+        <div class="card-body">
+            <div class="row">
+                <!-- Player Filters -->
+                <div class="col-md-6">
+                    <label class="form-label">Filter by Players (up to 4, type to search)</label>
+                    @for (int i = 0; i < 4; i++)
+                    {
+                        var index = i;
+                        <div class="mb-2">
+                            <input type="text" 
+                                   class="form-control" 
+                                   list="playerList" 
+                                   placeholder="Player @(i + 1) name (optional)" 
+                                   @bind="PlayerFilters[index]"
+                                   autocomplete="off"
+                                   style="max-width: 300px;">
+                        </div>
+                    }
+                    <datalist id="playerList">
+                        @foreach (var player in AllPlayerNames)
+                        {
+                            <option value="@player">@player</option>
+                        }
+                    </datalist>
+                </div>
+
+                <!-- Date Filters -->
+                <div class="col-md-6">
+                    <label class="form-label">Date Range</label>
+                    <div class="mb-2">
+                        <label class="form-label small">Min Date (optional)</label>
+                        <input type="date" class="form-control" @bind="MinDateFilter" style="max-width: 250px;">
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label small">Max Date (optional)</label>
+                        <input type="date" class="form-control" @bind="MaxDateFilter" style="max-width: 250px;">
+                    </div>
+                </div>
+            </div>
+
+            <button class="btn btn-success mt-3" @onclick="OnApplyFilters">
+                Apply Filters
+            </button>
+            <button class="btn btn-secondary mt-3 ms-2" @onclick="OnClearFilters">
+                Clear Filters
+            </button>
+        </div>
+    }
+</div>
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public List<string> PlayerFilters { get; set; } = new();
+    [Parameter] public DateTime? MinDateFilter { get; set; }
+    [Parameter] public EventCallback<DateTime?> MinDateFilterChanged { get; set; }
+    [Parameter] public DateTime? MaxDateFilter { get; set; }
+    [Parameter] public EventCallback<DateTime?> MaxDateFilterChanged { get; set; }
+    [Parameter] public List<string> AllPlayerNames { get; set; } = new();
+    [Parameter] public EventCallback OnApplyFilters { get; set; }
+    [Parameter] public EventCallback OnClearFilters { get; set; }
+
+    private async Task ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+}

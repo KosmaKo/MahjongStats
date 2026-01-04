@@ -5,6 +5,7 @@ namespace MahjongStats.Services
     public interface IPlayerStatsService
     {
         Task<PlayerStats> CalculateStatsAsync(List<MahjongGame> games, string playerName, IDatabaseService databaseService);
+        Task<OverallResults> CalculateOverallResultsAsync(List<MahjongGame> games, List<string> playerNames);
     }
 
     /// <summary>
@@ -49,7 +50,9 @@ namespace MahjongStats.Services
             if (string.IsNullOrWhiteSpace(playerName) || games.Count == 0)
                 return stats;
 
-            var matchingGames = games.Where(g => g.Players.Any(p => p.Name?.Equals(playerName, StringComparison.OrdinalIgnoreCase) ?? false)).ToList();
+            var normalizedPlayerName = playerName.ToUpper();
+            var matchingGames = games.Where(g => g.Players.Any(p =>
+                (p.Name?.ToUpper() ?? "").Contains(normalizedPlayerName))).ToList();
             if (matchingGames.Count == 0)
                 return stats;
 
@@ -74,7 +77,8 @@ namespace MahjongStats.Services
 
             foreach (var game in matchingGames)
             {
-                var playerIndex = game.Players.FindIndex(p => p.Name?.Equals(playerName, StringComparison.OrdinalIgnoreCase) ?? false);
+                var playerIndex = game.Players.FindIndex(p =>
+                    (p.Name?.ToUpper() ?? "").Contains(normalizedPlayerName));
                 if (playerIndex == -1) continue;
 
                 // Game-level stats
@@ -114,6 +118,7 @@ namespace MahjongStats.Services
 
         private int CalculatePlacement(MahjongGame game, int playerIndex)
         {
+            // Use [0] for base game points (before uma/chombo) to determine placement
             var playerPoints = game.Points[playerIndex][0];
             var betterCount = 0;
             for (int i = 0; i < game.Points.Count; i++)
@@ -151,7 +156,7 @@ namespace MahjongStats.Services
             var dealerIndex = round.GetDealerIndex();
 
             //stats for rounds as dealer
-            if(dealerIndex == playerIndex)
+            if (dealerIndex == playerIndex)
                 stats.OyaRoundCount++;
 
             // we won
@@ -172,28 +177,32 @@ namespace MahjongStats.Services
             var winnerIndex = round.Data?.WinnerSeat.ToPlayerIndex();
 
             // we won
-            if (winnerIndex == playerIndex){
+            if (winnerIndex == playerIndex)
+            {
                 stats.TsumoCount++;
                 hasWinningRound = true;
             }
 
             //stats for rounds as dealer
-            if(dealerIndex == playerIndex){
-                stats.OyaRoundCount++;            
-                
+            if (dealerIndex == playerIndex)
+            {
+                stats.OyaRoundCount++;
+
                 //tsumo on our oya - it hurts
                 if (winnerIndex != playerIndex)
                 {
                     stats.OyaEnemyTsumoCount++;
-                    if (IsHaneman(round.Data?.Score)){
+                    if (IsHaneman(round.Data?.Score))
+                    {
                         stats.OyaTsumoManganCount++;
                         stats.OyaTsumoHanemanCount++;
                     }
 
-                    else if (IsMangan(round.Data?.Score)){
+                    else if (IsMangan(round.Data?.Score))
+                    {
                         stats.OyaTsumoManganCount++;
                     }
-                }                
+                }
             }
         }
 
@@ -208,9 +217,13 @@ namespace MahjongStats.Services
         {
             if (score == null) return false;
             var han = score.Han;
-            return han >= 6; 
+            return han >= 6;
         }
 
+        public async Task<OverallResults> CalculateOverallResultsAsync(List<MahjongGame> games, List<string> playerNames)
+        {
+            return await OverallResultsCalculator.CalculateOverallResultsAsync(games, playerNames);
+        }
     }
 
     /// <summary>
@@ -243,4 +256,106 @@ namespace MahjongStats.Services
         public double HanemanPlusTsumoRateOnOya { get; set; } // %
         public int TsumoRate { get; set; }// %
     }
+
+    public static class OverallResultsCalculator
+    {
+        public static async Task<OverallResults> CalculateOverallResultsAsync(List<MahjongGame> games, List<string> playerNames)
+        {
+            var results = new OverallResults();
+
+            if (games.Count == 0 || playerNames.Count == 0)
+                return results;
+
+            var playerSummaries = new Dictionary<string, PlayerRankingSummary>();
+
+            // Normalize player names to uppercase for matching
+            var normalizedPlayerNames = playerNames.Select(p => p.ToUpper()).ToList();
+
+            // Initialize summaries for each player
+            foreach (var playerName in playerNames)
+            {
+                playerSummaries[playerName.ToUpper()] = new PlayerRankingSummary
+                {
+                    PlayerName = playerName
+                };
+            }
+
+            // Process each game
+            foreach (var game in games)
+            {
+                // Calculate final rankings for ALL players based on base points (before uma)
+                var allGameStandings = new List<(string PlayerName, int BasePoints, int TotalPoints, int Rank, string FilterKey)>();
+
+                for (int i = 0; i < game.Players.Count; i++)
+                {
+                    var playerName = game.Players[i].Name?.ToUpper() ?? "Unknown";
+                    var basePoints = game.Points[i][0]; // Base game points for ranking
+                    var totalPoints = game.Points[i].Sum(); // Total including uma/chombo for display
+
+                    // Check if this player matches any of our filter strings (substring match)
+                    var matchingFilterKey = normalizedPlayerNames.FirstOrDefault(filter =>
+                        playerName.Contains(filter));
+
+                    allGameStandings.Add((playerName, basePoints, totalPoints, 0, matchingFilterKey ?? ""));
+                }
+
+                // Sort by BASE POINTS descending and assign ranks
+                allGameStandings = allGameStandings.OrderByDescending(x => x.BasePoints).ToList();
+                var rankedStandings = new List<(string PlayerName, int BasePoints, int TotalPoints, int Rank, string FilterKey)>();
+                for (int rank = 0; rank < allGameStandings.Count; rank++)
+                {
+                    var standing = allGameStandings[rank];
+                    rankedStandings.Add((standing.PlayerName, standing.BasePoints, standing.TotalPoints, rank + 1, standing.FilterKey));
+                }
+
+                // Update summaries only for filtered players
+                foreach (var standing in rankedStandings)
+                {
+                    if (!string.IsNullOrEmpty(standing.FilterKey) && playerSummaries.ContainsKey(standing.FilterKey))
+                    {
+                        var summary = playerSummaries[standing.FilterKey];
+                        summary.GamesPlayed++;
+                        summary.TotalPoints += standing.TotalPoints; // Use total points for cumulative score
+
+                        switch (standing.Rank)
+                        {
+                            case 1:
+                                summary.FirstPlaces++;
+                                break;
+                            case 2:
+                                summary.SecondPlaces++;
+                                break;
+                            case 3:
+                                summary.ThirdPlaces++;
+                                break;
+                            case 4:
+                                summary.FourthPlaces++;
+                                break;
+                        }
+                    }
+                }
+            }
+
+            // Calculate average ranks
+            foreach (var summary in playerSummaries.Values)
+            {
+                if (summary.GamesPlayed > 0)
+                {
+                    var totalRankPoints = (summary.FirstPlaces * 1) +
+                                         (summary.SecondPlaces * 2) +
+                                         (summary.ThirdPlaces * 3) +
+                                         (summary.FourthPlaces * 4);
+                    summary.AverageRank = (double)totalRankPoints / summary.GamesPlayed;
+                }
+            }
+
+            // Sort by total points descending
+            results.PlayerRankings = playerSummaries.Values
+                .OrderByDescending(p => p.TotalPoints)
+                .ToList();
+
+            return await Task.FromResult(results);
+        }
+    }
 }
+

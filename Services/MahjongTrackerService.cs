@@ -38,18 +38,18 @@ namespace MahjongStats.Services
                     _logger.LogError("Bearer token is null or empty");
                     throw new InvalidOperationException("Bearer token is required");
                 }
-                
+
                 var url = $"{_baseUrl}/games?show_all=1";
-                
+
                 var request = new HttpRequestMessage(HttpMethod.Get, url);
                 request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
 
                 var response = await _httpClient.SendAsync(request);
-                
+
                 response.EnsureSuccessStatusCode();
 
                 var games = await response.Content.ReadFromJsonAsync<List<MahjongGame>>();
-                
+
                 // Save to database in bulk (replacing all games)
                 if (games != null && games.Any())
                 {
@@ -62,7 +62,7 @@ namespace MahjongStats.Services
                         _logger.LogWarning($"Failed to save games to database: {ex.Message}");
                     }
                 }
-                
+
                 return games ?? new List<MahjongGame>();
             }
             catch (HttpRequestException ex)
@@ -85,18 +85,18 @@ namespace MahjongStats.Services
                 request.Headers.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", bearerToken);
 
                 var response = await _httpClient.SendAsync(request);
-                
+
                 // Handle 500 errors gracefully - skip this game and continue with others
                 if (response.StatusCode == System.Net.HttpStatusCode.InternalServerError)
                 {
                     _logger.LogWarning($"API returned 500 error for game {gameId}, skipping this game");
                     return new List<RoundDetail>();
                 }
-                
+
                 response.EnsureSuccessStatusCode();
 
                 var rounds = await response.Content.ReadFromJsonAsync<List<RoundDetail>>();
-                
+
                 // Populate GameId for each round
                 if (rounds != null)
                 {
@@ -105,7 +105,7 @@ namespace MahjongStats.Services
                         round.GameId = gameId;
                     }
                 }
-                
+
                 // Save to database
                 if (rounds != null)
                 {
@@ -118,7 +118,7 @@ namespace MahjongStats.Services
                         _logger.LogWarning($"Failed to save rounds for game {gameId}: {ex.Message}");
                     }
                 }
-                
+
                 return rounds ?? new List<RoundDetail>();
             }
             catch (Exception ex)
@@ -194,7 +194,7 @@ namespace MahjongStats.Services
             {
                 // Get all games
                 var allGameIds = await _databaseService.GetAllGameIdsAsync();
-                
+
                 // Get games that already have rounds
                 var gamesWithRounds = await _databaseService.GetGamesWithRoundsAsync();
                 var gamesWithRoundsSet = new HashSet<string>(gamesWithRounds);

@@ -1,6 +1,7 @@
 @page "/games"
 @using MahjongStats.Models
 @using MahjongStats.Services
+@using MahjongStats.Components.Pages.GameComponents
 @inject IGameFilterService FilterService
 @inject IPlayerStatsService StatsService
 @inject IDatabaseService DatabaseService
@@ -12,7 +13,6 @@
     <h1>📊 Mahjong Statistics</h1>
     <p class="text-muted">View your game statistics. Use the <a href="/refresh" class="text-decoration-none">Refresh</a> page to update data.</p>
 
-    <!-- Database Status Alert -->
     @if (isLoadingGames)
     {
         <div class="alert alert-info">
@@ -28,59 +28,18 @@
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
-    else
-    {
-        <div class="alert alert-info alert-dismissible fade show" role="alert">
-            <strong>✓ Data loaded:</strong> @games.Count games from database
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-    }
 
-    <!-- Filter Section -->
     @if (games != null && games.Count > 0)
     {
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Filters</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <!-- Date Filters -->
-                    <div class="col-md-6">
-                        <label class="form-label">Date Range</label>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <label class="form-label small">Min Date (optional)</label>
-                                <input type="date" class="form-control" @bind="minDateFilter">
-                            </div>
-                            <div class="col-md-6">
-                                <label class="form-label small">Max Date (optional)</label>
-                                <input type="date" class="form-control" @bind="maxDateFilter">
-                            </div>
-                        </div>
-                    </div>
+        <FilterSection 
+            @bind-IsExpanded="isFiltersExpanded"
+            PlayerFilters="playerFilters"
+            @bind-MinDateFilter="minDateFilter"
+            @bind-MaxDateFilter="maxDateFilter"
+            AllPlayerNames="allPlayerNames"
+            OnApplyFilters="ApplyFilters"
+            OnClearFilters="ClearFilters" />
 
-                    <!-- Player Filters -->
-                    <div class="col-md-6">
-                        <label class="form-label">Filter by Players (up to 4, case-insensitive substring)</label>
-                        @for (int i = 0; i < 4; i++)
-                        {
-                            var index = i;
-                            <input type="text" class="form-control mb-2" placeholder="Player @(i + 1) name (optional)" @bind="playerFilters[index]">
-                        }
-                    </div>
-                </div>
-
-                <button class="btn btn-success mt-3" @onclick="ApplyFilters">
-                    Apply Filters
-                </button>
-                <button class="btn btn-secondary mt-3 ms-2" @onclick="ClearFilters">
-                    Clear Filters
-                </button>
-            </div>
-        </div>
-
-        <!-- Games Stats -->
         <div class="alert alert-info">
             <strong>Games:</strong> Showing @filteredGames.Count of @games.Count games
             @if (!string.IsNullOrEmpty(filterSummary))
@@ -90,337 +49,28 @@
             }
         </div>
 
-        <!-- Player Stats Section -->
-        <div class="card mb-4">
-            <div class="card-header" style="background-color: #28a745; color: white;">
-                <h5 class="card-title mb-0">📈 Calculate Player Stats</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <label class="form-label">Player Name (required)</label>
-                        <input type="text" class="form-control" @bind="statsPlayerName" placeholder="Enter player name for stats">
-                    </div>
-                </div>
-                <button class="btn btn-success mt-3" @onclick="async () => await CalculateStats()" disabled="@string.IsNullOrWhiteSpace(statsPlayerName)">
-                    Calculate Stats
-                </button>
-                
-                @if (isLoadingStats)
-                {
-                    <div class="alert alert-info mt-3">
-                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                        Please be patient, the data is loading, it might take a moment
-                    </div>
-                }
-                else if (currentStats != null && currentStats.GamesPlayed > 0)
-                {
-                    <div class="mt-4">
-                        <h6>Stats for <strong>@currentStats.PlayerName</strong> (@currentStats.GamesPlayed games, @currentStats.RoundsPlayed rounds)</h6>
-                        <div class="row">
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6>Performance</h6>
-                                        <p class="mb-1">
-                                            <small><strong>Avg Rank:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.AverageRank.ToString("F2")</span>
-                                        </p>
-                                        <p class="mb-1">
-                                            <small><strong>Avg Points:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.AveragePoints.ToString("F0")</span>
-                                        </p>
-                                        <p class="mb-0">
-                                            <small><strong>Win Rate:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.WinningRate.ToString("F1")%</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6>Winning Patterns</h6>
-                                        <p class="mb-1">
-                                            <small><strong>Tsumo Rate:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.TsumoRate.ToString("F1")%</span>
-                                        </p>
-                                        <p class="mb-1">
-                                            <small><strong>Yakitori Rate:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.YakitoriRate.ToString("F1")%</span>
-                                        </p>
-                                        <p class="mb-0">
-                                            <small><strong>Deal-In Rate:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.DealInRate.ToString("F1")%</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="col-md-4">
-                                <div class="card bg-light">
-                                    <div class="card-body">
-                                        <h6>Dealer Performance</h6>
-                                        <p class="mb-1">
-                                            <small><strong>Oya Tsumo Rate:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.TsumoRateOnOya.ToString("F1")%</span>
-                                        </p>
-                                        <p class="mb-1">
-                                            <small><strong>Mangan+ on Oya:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.ManganPlusTsumoRateOnOya.ToString("F1")%</span>
-                                        </p>
-                                        <p class="mb-0">
-                                            <small><strong>Haneman+ on Oya:</strong></small>
-                                            <br/>
-                                            <span style="font-size: 1.3em;">@currentStats.HanemanPlusTsumoRateOnOya.ToString("F1")%</span>
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                }
-                
-                @if (!string.IsNullOrEmpty(statsError))
-                {
-                    <div class="alert alert-danger mt-3">@statsError</div>
-                }
-            </div>
-        </div>
+        <PinnedStatsSection 
+            @bind-IsExpanded="isPinnedStatsExpanded"
+            PinnedStats="pinnedStats"
+            OnClearAll="ClearAllPinnedStats"
+            OnUnpin="UnpinStats" />
 
-        <!-- Games Grid -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="card-title mb-0">Game Records</h5>
-            </div>
-            <div class="card-body">
-                @if (filteredGames.Count > 0)
-                {
-                    <div class="table-responsive">
-                        <table class="table table-striped table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Date/Time</th>
-                                    <th>Players</th>
-                                    <th>Round</th>
-                                    <th>Status</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach (var game in filteredGames)
-                                {
-                                    <tr style="cursor: pointer;" @onclick="() => ToggleGameExpanded(game.Id)">
-                                        <td>
-                                            <small>@game.CreatedDateTime.ToString("yyyy-MM-dd HH:mm")</small>
-                                        </td>
-                                        <td>
-                                            @foreach (var player in game.Players)
-                                            {
-                                                <span class="badge bg-secondary me-1">@player.Name</span>
-                                            }
-                                        </td>
-                                        <td>@(game.Round ?? "-")</td>
-                                        <td>
-                                            @if (gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
-                                            {
-                                                <span class="badge bg-success">@gameRoundsMap[game.Id].Count Rounds</span>
-                                            }
-                                            else
-                                            {
-                                                <span class="badge bg-warning">Pending</span>
-                                            }
-                                        </td>
-                                    </tr>
-                                    @if (expandedGameId == game.Id && gameRoundsMap.ContainsKey(game.Id) && gameRoundsMap[game.Id].Count > 0)
-                                    {
-                                        <tr class="table-active">
-                                            <td colspan="4">
-                                                <div class="p-3">
-                                                    <!-- Game Summary Section -->
-                                                    <h6 class="mb-3">Game Summary - Final Standings</h6>
-                                                    <div class="table-responsive mb-4">
-                                                        <table class="table table-sm table-bordered mb-0">
-                                                            <thead class="table-light">
-                                                                <tr>
-                                                                    <th>Rank</th>
-                                                                    <th>Player</th>
-                                                                    <th>Points</th>
-                                                                    <th>Uma</th>
-                                                                    <th>Total</th>
-                                                                    <th>Chombo</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @{
-                                                                    var standings = new List<(string PlayerName, int TotalPoints, int Rank)>();
-                                                                    for (int i = 0; i < game.Players.Count; i++)
-                                                                    {
-                                                                        var playerName = game.Players[i].Name ?? "Unknown";
-                                                                        var totalPoints = game.Points[i].Sum();
-                                                                        standings.Add((playerName, totalPoints, 0));
-                                                                    }
-                                                                    standings = standings.OrderByDescending(x => x.TotalPoints).ToList();
-                                                                    for (int rank = 0; rank < standings.Count; rank++)
-                                                                    {
-                                                                        standings[rank] = (standings[rank].PlayerName, standings[rank].TotalPoints, rank + 1);
-                                                                    }
-                                                                }
-                                                                @foreach (var standing in standings)
-                                                                {
-                                                                    var playerIndex = Array.IndexOf(game.Players.Select(p => p.Name).ToArray(), standing.PlayerName);
-                                                                    var points = 0;
-                                                                    var uma = 0;
-                                                                    var chomboCount = 0;
-                                                                    if (playerIndex >= 0)
-                                                                    {
-                                                                        points = game.Points[playerIndex][0];
-                                                                        uma = game.Points[playerIndex].Count >= 2 ? game.Points[playerIndex][1] : 0;
-                                                                        chomboCount = game.Points[playerIndex].Count >= 3 ? game.Points[playerIndex][2] : 0;
-                                                                    }
-                                                                    <tr>
-                                                                        <td><strong>@standing.Rank</strong></td>
-                                                                        <td>@standing.PlayerName</td>
-                                                                        <td>
-                                                                            <span style="color: @(points > 0 ? "#28a745" : points < 0 ? "#dc3545" : "#6c757d");">
-                                                                                @(points > 0 ? "+" : "")@points
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            <span style="color: @(uma > 0 ? "#28a745" : uma < 0 ? "#dc3545" : "#6c757d");">
-                                                                                @(uma > 0 ? "+" : "")@uma
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            <span style="font-weight: bold; color: @(standing.TotalPoints > 0 ? "#28a745" : standing.TotalPoints < 0 ? "#dc3545" : "#6c757d");">
-                                                                                @(standing.TotalPoints > 0 ? "+" : "")@standing.TotalPoints
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            @if (chomboCount != 0)
-                                                                            {
-                                                                                <span class="badge bg-danger">@Math.Abs(chomboCount)</span>
-                                                                            }
-                                                                        </td>
-                                                                    </tr>
-                                                                }
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                    <hr class="my-3"/>
-                                                    <!-- Rounds Section -->
-                                                    <h6 class="mb-3">Rounds for @game.Round</h6>
-                                                    <div class="table-responsive">
-                                                        <table class="table table-sm table-bordered mb-0">
-                                                            <thead class="table-light">
-                                                                <tr>
-                                                                    <th>Round</th>
-                                                                    <th>Outcome</th>
-                                                                    <th>Winner/Loser</th>
-                                                                    <th>Score</th>
-                                                                    <th>Points</th>
-                                                                </tr>
-                                                            </thead>
-                                                            <tbody>
-                                                                @foreach (var round in gameRoundsMap[game.Id])
-                                                                {
-                                                                    <tr>
-                                                                        <td><small>@round.Round</small></td>
-                                                                        <td>
-                                                                            <span class="badge @(round.Outcome == "Ron" ? "bg-info" : round.Outcome == "Tsumo" ? "bg-success" : round.Outcome == "Draw" ? "bg-warning" : "bg-secondary")">
-                                                                                @round.Outcome
-                                                                            </span>
-                                                                        </td>
-                                                                        <td>
-                                                                            <small>
-                                                                                @if (round.Outcome == "Ron")
-                                                                                {
-                                                                                    var winnerSeat = round.Data?.Winners?.FirstOrDefault()?.Seat;
-                                                                                    var winnerName = GetPlayerNameBySeat(game, winnerSeat);
-                                                                                    var loserName = GetPlayerNameBySeat(game, round.Data?.LoserSeat);
-                                                                                    <span class="text-success"><strong>W:</strong> @winnerName</span>
-                                                                                    <br/>
-                                                                                    <span class="text-danger"><strong>L:</strong> @loserName</span>
-                                                                                }
-                                                                                else if (round.Outcome == "Tsumo")
-                                                                                {
-                                                                                    var winnerName = GetPlayerNameBySeat(game, round.Data?.WinnerSeat);
-                                                                                    <span class="text-success"><strong>W:</strong> @winnerName</span>
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    <span class="text-muted">-</span>
-                                                                                }
-                                                                            </small>
-                                                                        </td>
-                                                                        <td>
-                                                                            <small>
-                                                                                @if (round.Data?.Score != null)
-                                                                                {
-                                                                                    <span>@round.Data.Score.Han Han @(round.Data.Score.Fu ?? 0) Fu</span>
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    <span class="text-muted">-</span>
-                                                                                }
-                                                                            </small>
-                                                                        </td>
-                                                                        <td>
-                                                                            <small>
-                                                                                @if (round.Points != null && round.Points.Count > 0)
-                                                                                {
-                                                                                    @for (int i = 0; i < game.Players.Count && i < round.Points.Count; i++)
-                                                                                    {
-                                                                                        var playerName = game.Players[i].Name;
-                                                                                        var playerPoints = round.Points[i];
-                                                                                        var totalPoints = playerPoints.Count > 0 ? playerPoints.Sum() : 0;
-                                                                                        var playerSeat = $"Player{i + 1}";
-                                                                                        var didRiichi = round.Data?.Riichi != null && round.Data.Riichi.Contains(playerSeat);
-                                                                                        <span style="color: @(totalPoints > 0 ? "#28a745" : totalPoints < 0 ? "#dc3545" : "#6c757d");">
-                                                                                            @playerName: @(totalPoints > 0 ? "+" : "")@totalPoints
-                                                                                            @if (didRiichi)
-                                                                                            {
-                                                                                                <span title="Riichi">🀄</span>
-                                                                                            }
-                                                                                        </span>
-                                                                                        @if (i < game.Players.Count - 1)
-                                                                                        {
-                                                                                            <br/>
-                                                                                        }
-                                                                                    }
-                                                                                }
-                                                                                else
-                                                                                {
-                                                                                    <span class="text-muted">-</span>
-                                                                                }
-                                                                            </small>
-                                                                        </td>
-                                                                    </tr>
-                                                                }
-                                                            </tbody>
-                                                        </table>
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    }
-                                }
-                            </tbody>
-                        </table>
-                    </div>
-                }
-                else
-                {
-                    <p class="text-muted">No games match your filters. Try adjusting the date range or player names.</p>
-                }
-            </div>
-        </div>
+        <PlayerStatsSection 
+            @bind-IsExpanded="isPlayerStatsExpanded"
+            PlayerStats="playerStats"
+            IsLoading="isLoadingStats"
+            OnPin="PinStats" />
+
+        <OverallResultsSection 
+            @bind-IsExpanded="isOverallResultsExpanded"
+            Results="overallResults" />
+
+        <GameRecordsSection 
+            @bind-IsExpanded="isGamesListExpanded"
+            FilteredGames="filteredGames"
+            GameRoundsMap="gameRoundsMap"
+            ExpandedGameId="expandedGameId"
+            OnToggleGame="ToggleGameExpanded" />
     }
 </div>
 
@@ -428,14 +78,20 @@
     private List<MahjongGame> games = new();
     private List<MahjongGame> filteredGames = new();
     private Dictionary<string, List<RoundDetail>> gameRoundsMap = new();
-    private string statsPlayerName = "";
-    private PlayerStats? currentStats;
-    private string statsError = "";
+    private Dictionary<string, PlayerStats> playerStats = new();
+    private OverallResults? overallResults = null;
     private string? expandedGameId = null;
     private bool isLoadingStats = false;
     private bool isLoadingGames = true;
+    private List<string> allPlayerNames = new();
+    private List<PinnedStatsSection.PinnedPlayerStats> pinnedStats = new();
 
-    // Filter state
+    private bool isFiltersExpanded = true;
+    private bool isPinnedStatsExpanded = true;
+    private bool isPlayerStatsExpanded = true;
+    private bool isOverallResultsExpanded = true;
+    private bool isGamesListExpanded = true;
+
     private DateTime? minDateFilter;
     private DateTime? maxDateFilter;
     private List<string> playerFilters = new() { "", "", "", "" };
@@ -445,56 +101,44 @@
     {
         try
         {
-            // Load games from database
             games = await DatabaseService.GetAllGamesAsync();
             filteredGames = games;
             
-            // Load rounds map to check game status
             var allRounds = await DatabaseService.GetAllRoundsAsync();
             gameRoundsMap = new Dictionary<string, List<RoundDetail>>(allRounds);
+            
+            allPlayerNames = games
+                .SelectMany(g => g.Players)
+                .Where(p => !string.IsNullOrWhiteSpace(p.Name))
+                .Select(p => p.Name!.ToUpper())
+                .Distinct()
+                .OrderBy(name => name)
+                .ToList();
         }
         finally
         {
             isLoadingGames = false;
         }
         
-        // Set default minimum date filter
         minDateFilter = new DateTime(2025, 1, 1);
-    }
-
-    private void ToggleGameExpanded(string? gameId)
-    {
-        expandedGameId = expandedGameId == gameId ? null : gameId;
     }
 
     private void ApplyFilters()
     {
-        if (games == null || games.Count == 0)
-            return;
+        if (games == null || games.Count == 0) return;
 
-        // Get non-empty player filters
-        var playerNames = playerFilters
-            .Where(p => !string.IsNullOrWhiteSpace(p))
-            .ToList();
+        var playerNames = playerFilters.Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+        filteredGames = FilterService.FilterGames(games, minDateFilter, maxDateFilter, playerNames.Count > 0 ? playerNames : null);
 
-        // Apply filters
-        filteredGames = FilterService.FilterGames(
-            games,
-            minDateFilter,
-            maxDateFilter,
-            playerNames.Count > 0 ? playerNames : null
-        );
-
-        // Build filter summary
         var summaryParts = new List<string>();
-        if (minDateFilter.HasValue)
-            summaryParts.Add($"From {minDateFilter:yyyy-MM-dd}");
-        if (maxDateFilter.HasValue)
-            summaryParts.Add($"Until {maxDateFilter:yyyy-MM-dd}");
-        if (playerNames.Count > 0)
-            summaryParts.Add($"Players: {string.Join(", ", playerNames)}");
-
+        if (minDateFilter.HasValue) summaryParts.Add($"From {minDateFilter:yyyy-MM-dd}");
+        if (maxDateFilter.HasValue) summaryParts.Add($"Until {maxDateFilter:yyyy-MM-dd}");
+        if (playerNames.Count > 0) summaryParts.Add($"Players: {string.Join(", ", playerNames)}");
         filterSummary = summaryParts.Count > 0 ? string.Join(" | ", summaryParts) : "";
+        
+        _ = CalculateStatsForFilteredPlayers(playerNames);
+        if (playerNames.Count > 0) _ = CalculateOverallResults(playerNames);
+        else overallResults = null;
     }
 
     private void ClearFilters()
@@ -504,28 +148,28 @@
         playerFilters = new() { "", "", "", "" };
         filterSummary = "";
         filteredGames = games;
+        playerStats.Clear();
+        overallResults = null;
     }
 
-    private async Task CalculateStats()
+    private async Task CalculateStatsForFilteredPlayers(List<string> playerNames)
     {
-        if (string.IsNullOrWhiteSpace(statsPlayerName) || filteredGames == null || filteredGames.Count == 0)
+        if (playerNames.Count == 0 || filteredGames.Count == 0)
         {
-            currentStats = null;
-            statsError = "";
-            isLoadingStats = false;
+            playerStats.Clear();
             return;
         }
 
         isLoadingStats = true;
+        playerStats.Clear();
+        
         try
         {
-            currentStats = await StatsService.CalculateStatsAsync(filteredGames, statsPlayerName, DatabaseService);
-            statsError = "";
-        }
-        catch (Exception ex)
-        {
-            statsError = $"Error calculating stats: {ex.Message}";
-            currentStats = null;
+            foreach (var playerName in playerNames)
+            {
+                var stats = await StatsService.CalculateStatsAsync(filteredGames, playerName, DatabaseService);
+                if (stats.GamesPlayed > 0) playerStats[playerName] = stats;
+            }
         }
         finally
         {
@@ -533,12 +177,54 @@
         }
     }
 
+    private async Task CalculateOverallResults(List<string> playerNames)
+    {
+        if (playerNames.Count == 0 || filteredGames.Count == 0)
+        {
+            overallResults = null;
+            return;
+        }
+
+        try
+        {
+            overallResults = await StatsService.CalculateOverallResultsAsync(filteredGames, playerNames);
+        }
+        catch
+        {
+            overallResults = null;
+        }
+    }
+
+    private void PinStats(PlayerStats stats)
+    {
+        var contextParts = new List<string>();
+        if (minDateFilter.HasValue) contextParts.Add($"From {minDateFilter:yyyy-MM-dd}");
+        if (maxDateFilter.HasValue) contextParts.Add($"To {maxDateFilter:yyyy-MM-dd}");
+        var context = contextParts.Count > 0 ? string.Join(" | ", contextParts) : "All dates";
+        
+        var existingPin = pinnedStats.FirstOrDefault(p => 
+            p.Stats.PlayerName.Equals(stats.PlayerName, StringComparison.OrdinalIgnoreCase) && 
+            p.FilterContext == context);
+        
+        if (existingPin == null)
+        {
+            pinnedStats.Add(new PinnedStatsSection.PinnedPlayerStats { Stats = stats, FilterContext = context });
+        }
+    }
+
+    private void UnpinStats(PinnedStatsSection.PinnedPlayerStats pinnedStat) => pinnedStats.Remove(pinnedStat);
+    
+    private void ClearAllPinnedStats() => pinnedStats.Clear();
+
+    private void ToggleGameExpanded(string? gameId)
+    {
+        expandedGameId = expandedGameId == gameId ? null : gameId;
+    }
+
     private string GetPlayerNameBySeat(MahjongGame game, string? seat)
     {
-        if (string.IsNullOrEmpty(seat))
-            return "Unknown";
+        if (string.IsNullOrEmpty(seat)) return "Unknown";
 
-        // Try to parse player index from seat string (e.g., "Player1" -> 0, "Player2" -> 1, etc.)
         int? playerIndex = null;
         
         if (seat.StartsWith("Player", StringComparison.OrdinalIgnoreCase))

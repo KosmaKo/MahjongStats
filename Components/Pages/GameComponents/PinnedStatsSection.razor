@@ -1,0 +1,55 @@
+@using MahjongStats.Models
+
+@if (PinnedStats.Count > 0)
+{
+    <div class="card mb-4 pinned-stats">
+        <div class="card-header d-flex justify-content-between align-items-center" style="cursor: pointer;" @onclick="ToggleExpanded">
+            <h5 class="card-title mb-0">
+                @(IsExpanded ? "▼" : "▶") 📌 Pinned Statistics (@PinnedStats.Count)
+            </h5>
+            <button class="btn btn-sm btn-outline-dark" @onclick="OnClearAll" @onclick:stopPropagation="true">
+                Clear All
+            </button>
+        </div>
+        @if (IsExpanded)
+        {
+            <div class="card-body">
+                @foreach (var pinnedStat in PinnedStats)
+                {
+                    <div class="mb-4 pb-3 border-bottom">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div>
+                                <h6>Stats for <strong>@pinnedStat.Stats.PlayerName</strong> (@pinnedStat.Stats.GamesPlayed games, @pinnedStat.Stats.RoundsPlayed rounds)</h6>
+                                <small class="text-muted">@pinnedStat.FilterContext</small>
+                            </div>
+                            <button class="btn btn-sm btn-outline-danger pin-button" @onclick="() => OnUnpin.InvokeAsync(pinnedStat)">
+                                🗑️ Remove
+                            </button>
+                        </div>
+                        <PlayerStatsCard Stats="@pinnedStat.Stats" />
+                    </div>
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public List<PinnedPlayerStats> PinnedStats { get; set; } = new();
+    [Parameter] public EventCallback OnClearAll { get; set; }
+    [Parameter] public EventCallback<PinnedPlayerStats> OnUnpin { get; set; }
+
+    private async Task ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+
+    public class PinnedPlayerStats
+    {
+        public PlayerStats Stats { get; set; } = null!;
+        public string FilterContext { get; set; } = "";
+    }
+}

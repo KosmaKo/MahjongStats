@@ -15,15 +15,15 @@ namespace MahjongStats
         {
             // Load .env file if it exists
             DotNetEnv.Env.Load();
-            
+
             var builder = WebApplication.CreateBuilder(args);
 
             // Add services to the container.
             builder.Services.AddRazorComponents()
                 .AddInteractiveServerComponents();
-            
+
             // Add database context
-            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
+            var connectionString = builder.Configuration.GetConnectionString("DefaultConnection")
                 ?? "Data Source=MahjongStats.db";
             builder.Services.AddDbContext<MahjongStatsContext>(options =>
                 options.UseSqlite(connectionString));
@@ -36,7 +36,7 @@ namespace MahjongStats
 
             // Add Cascading Authentication State for Blazor components
             builder.Services.AddCascadingAuthenticationState();
-            
+
             // Add Authentication services
             builder.Services.AddAuthentication(o =>
             {
@@ -56,11 +56,11 @@ namespace MahjongStats
                 o.ClaimActions.MapJsonKey("urn:google:picture", "picture");
                 o.ClaimActions.MapJsonKey(ClaimTypes.Email, "email");
             });
-            
+
             builder.Services.AddAuthorization();
 
             var app = builder.Build();
-            
+
             // Configure forwarded headers for Railway (MUST be before authentication)
             var forwardedHeadersOptions = new ForwardedHeadersOptions
             {
@@ -69,7 +69,7 @@ namespace MahjongStats
             forwardedHeadersOptions.KnownNetworks.Clear();
             forwardedHeadersOptions.KnownProxies.Clear();
             app.UseForwardedHeaders(forwardedHeadersOptions);
-            
+
             // Initialize database
             using (var scope = app.Services.CreateScope())
             {
@@ -94,27 +94,27 @@ namespace MahjongStats
 
             app.MapRazorComponents<App>()
                 .AddInteractiveServerRenderMode();
-            
+
             // Map authentication endpoints
             app.MapGet("/auth/login", (HttpContext context, string? returnUrl = null) =>
             {
                 var redirectUri = !string.IsNullOrEmpty(returnUrl) ? returnUrl : "/";
                 return Results.Challenge(new AuthenticationProperties { RedirectUri = redirectUri }, new[] { "Google" });
             });
-            
+
             app.MapGet("/auth/logout", async (HttpContext context) =>
             {
                 await context.SignOutAsync("Cookies");
                 return Results.Redirect("/");
             });
-            
+
             app.MapGet("/auth/check", (HttpContext context) =>
             {
                 var user = context.User;
                 return Results.Json(new
                 {
                     authenticated = user?.Identity?.IsAuthenticated ?? false,
-                    email = user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value 
+                    email = user?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress")?.Value
                         ?? user?.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
                 });
             });

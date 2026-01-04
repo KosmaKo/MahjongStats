@@ -1,0 +1,73 @@
+/* Select dropdowns */
+select.form-select {
+    overflow-y: auto;
+}
+
+/* Pinned stats styling */
+.pinned-stats {
+    border: 2px solid #ffc107;
+    background-color: #fffbf0;
+}
+
+.pinned-stats .card-header {
+    background-color: #ffc107 !important;
+    color: #000 !important;
+}
+
+.pin-button {
+    font-size: 0.85rem;
+}
+
+/* Info tooltips */
+.info-icon {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    line-height: 16px;
+    text-align: center;
+    border-radius: 50%;
+    background-color: #6c757d;
+    color: white;
+    font-size: 12px;
+    font-weight: bold;
+    cursor: help;
+    margin-left: 5px;
+    position: relative;
+}
+
+.info-icon .tooltip-text {
+    visibility: hidden;
+    width: 250px;
+    background-color: #333;
+    color: #fff;
+    text-align: left;
+    border-radius: 6px;
+    padding: 10px;
+    position: absolute;
+    z-index: 1000;
+    bottom: 125%;
+    left: 50%;
+    margin-left: -125px;
+    opacity: 0;
+    transition: opacity 0.3s;
+    font-size: 13px;
+    font-weight: normal;
+    line-height: 1.4;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+.info-icon .tooltip-text::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    margin-left: -5px;
+    border-width: 5px;
+    border-style: solid;
+    border-color: #333 transparent transparent transparent;
+}
+
+.info-icon:hover .tooltip-text {
+    visibility: visible;
+    opacity: 1;
+}

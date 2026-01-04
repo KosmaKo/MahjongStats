@@ -1,0 +1,57 @@
+@using MahjongStats.Models
+
+@if (PlayerStats.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #28a745; color: white; cursor: pointer;" @onclick="ToggleExpanded">
+            <h5 class="card-title mb-0">
+                @(IsExpanded ? "▼" : "▶") 📈 Player Statistics
+            </h5>
+        </div>
+        @if (IsExpanded)
+        {
+            <div class="card-body">
+                @if (IsLoading)
+                {
+                    <div class="alert alert-info">
+                        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        Loading player statistics...
+                    </div>
+                }
+                else
+                {
+                    @foreach (var stats in PlayerStats.Values)
+                    {
+                        <div class="mb-4">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <h6 class="mb-0">Stats for <strong>@stats.PlayerName</strong> (@stats.GamesPlayed games, @stats.RoundsPlayed rounds)</h6>
+                                <button class="btn btn-sm btn-warning pin-button" @onclick="() => OnPin.InvokeAsync(stats)">
+                                    📌 Pin for Comparison
+                                </button>
+                            </div>
+                            <PlayerStatsCard Stats="@stats" />
+                            @if (PlayerStats.Values.Last() != stats)
+                            {
+                                <hr class="my-4"/>
+                            }
+                        </div>
+                    }
+                }
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public Dictionary<string, PlayerStats> PlayerStats { get; set; } = new();
+    [Parameter] public bool IsLoading { get; set; }
+    [Parameter] public EventCallback<PlayerStats> OnPin { get; set; }
+
+    private async Task ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+}

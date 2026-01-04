@@ -1,0 +1,68 @@
+@using MahjongStats.Models
+
+@if (Results != null && Results.PlayerRankings.Count > 0)
+{
+    <div class="card mb-4">
+        <div class="card-header" style="background-color: #007bff; color: white; cursor: pointer;" @onclick="ToggleExpanded">
+            <h5 class="card-title mb-0">
+                @(IsExpanded ? "▼" : "▶") 🏆 Overall Results
+            </h5>
+        </div>
+        @if (IsExpanded)
+        {
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-striped table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Player</th>
+                                <th>Total Points</th>
+                                <th>Games</th>
+                                <th>1st Places</th>
+                                <th>2nd Places</th>
+                                <th>3rd Places</th>
+                                <th>4th Places</th>
+                                <th>Avg Rank</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Results.PlayerRankings.Count; i++)
+                            {
+                                var player = Results.PlayerRankings[i];
+                                var rowClass = i == 0 ? "table-success" : "";
+                                <tr class="@rowClass">
+                                    <td><strong>@(i + 1)</strong></td>
+                                    <td><strong>@player.PlayerName</strong></td>
+                                    <td>
+                                        <span style="font-weight: bold; color: @(player.TotalPoints > 0 ? "#28a745" : player.TotalPoints < 0 ? "#dc3545" : "#6c757d");">
+                                            @(player.TotalPoints > 0 ? "+" : "")@player.TotalPoints
+                                        </span>
+                                    </td>
+                                    <td>@player.GamesPlayed</td>
+                                    <td><span class="badge bg-warning text-dark">@player.FirstPlaces</span></td>
+                                    <td><span class="badge bg-info">@player.SecondPlaces</span></td>
+                                    <td><span class="badge bg-secondary">@player.ThirdPlaces</span></td>
+                                    <td><span class="badge bg-dark">@player.FourthPlaces</span></td>
+                                    <td>@player.AverageRank.ToString("F2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter] public bool IsExpanded { get; set; } = true;
+    [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
+    [Parameter] public OverallResults? Results { get; set; }
+
+    private async Task ToggleExpanded()
+    {
+        IsExpanded = !IsExpanded;
+        await IsExpandedChanged.InvokeAsync(IsExpanded);
+    }
+}
