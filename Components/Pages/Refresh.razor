@@ -107,96 +107,36 @@
         </div>
     </div>
 
-    <!-- Sync Actions Section -->
+    <!-- Refresh Games Section -->
     <div class="card mb-4">
         <div class="card-header bg-primary text-white">
-            <h5 class="card-title mb-0">Sync Actions</h5>
+            <h5 class="card-title mb-0">Refresh Games</h5>
         </div>
         <div class="card-body">
-            <p>Choose an action to sync your game data:</p>
+            <p>Refresh all games created since the specified date. Missing rounds will be fetched automatically.</p>
             
-            <!-- Button Group -->
-            <div style="display: flex; flex-direction: column; gap: 1rem;" class="mb-4">
-                <!-- Get New Games -->
-                <div>
-                    <button class="btn btn-success" style="width: 100%; padding: 0.75rem;" @onclick="GetNewGames" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken))">
-                        @if (isLoading && currentStep == "newGames")
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Syncing New Games...</span>
-                        }
-                        else
-                        {
-                            <span>📥 Get New Games</span>
-                        }
-                    </button>
-                    <small class="text-muted d-block mt-2">Fetches any games you don't have yet and syncs their rounds</small>
-                    @if (newGamesMessage != null)
-                    {
-                        <div class="alert @newGamesMessage.IsError mt-2 mb-0">@newGamesMessage.Text</div>
-                    }
-                </div>
-
-                <!-- Refresh Games Since Date -->
-                <div>
-                    <button class="btn btn-warning" style="width: 100%; padding: 0.75rem;" @onclick="RefreshGamesSince" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken))">
-                        @if (isLoading && currentStep == "refreshSince")
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Refreshing Games...</span>
-                        }
-                        else
-                        {
-                            <span>🔄 Refresh Games Since</span>
-                        }
-                    </button>
-                    <div class="mt-2">
-                        <input type="date" class="form-control" @bind="refreshSinceDate" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken))">
-                    </div>
-                    <small class="text-muted d-block mt-2">Removes all games created after the selected date and re-fetches them from the API</small>
-                    @if (refreshSinceMessage != null)
-                    {
-                        <div class="alert @refreshSinceMessage.IsError mt-2 mb-0">@refreshSinceMessage.Text</div>
-                    }
-                </div>
-
-                <!-- Get Missing Rounds -->
-                <div>
-                    <button class="btn btn-info" style="width: 100%; padding: 0.75rem;" @onclick="GetMissingRounds" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken) || gamesMissingRounds <= 0)">
-                        @if (isLoading && currentStep == "missingRounds")
-                        {
-                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
-                            <span>Fetching Rounds (@currentRoundFetched/@gamesMissingRounds)...</span>
-                        }
-                        else
-                        {
-                            <span>📊 Get Missing Rounds</span>
-                        }
-                    </button>
-                    @if (gamesMissingRounds > 0)
-                    {
-                        <div class="alert alert-warning mt-2 mb-0">
-                            <strong>⚠ @gamesMissingRounds game@(gamesMissingRounds != 1 ? "s" : "") missing rounds</strong>
-                            @if (missingGameIds.Count > 0)
-                            {
-                                <br/>
-                                <small>Game IDs: @string.Join(", ", missingGameIds)</small>
-                            }
-                        </div>
-                    }
-                    else if (gamesMissingRounds == 0 && cachedGameCount > 0)
-                    {
-                        <div class="alert alert-success mt-2 mb-0">
-                            <strong>✓ All games have their rounds</strong>
-                        </div>
-                    }
-                    <small class="text-muted d-block mt-2">Fetches rounds only for games that don't have them yet</small>
-                    @if (missingRoundsMessage != null)
-                    {
-                        <div class="alert @missingRoundsMessage.IsError mt-2 mb-0">@missingRoundsMessage.Text</div>
-                    }
-                </div>
+            <div class="mb-3">
+                <label class="form-label">Refresh Since Date</label>
+                <input type="date" class="form-control" @bind="refreshSinceDate" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken))">
+                <small class="text-muted">Default: 2 weeks ago</small>
             </div>
+
+            <button class="btn btn-success w-100" style="padding: 0.75rem;" @onclick="RefreshGamesSince" disabled="@(isLoading || string.IsNullOrEmpty(bearerToken))">
+                @if (isLoading)
+                {
+                    <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                    <span>Refreshing Games...</span>
+                }
+                else
+                {
+                    <span>🔄 Refresh Games Since</span>
+                }
+            </button>
+
+            @if (refreshSinceMessage != null)
+            {
+                <div class="alert @(refreshSinceMessage.IsError ? "alert-danger" : "alert-success") mt-3 mb-0">@refreshSinceMessage.Text</div>
+            }
 
             <!-- Throttle Delay Setting -->
             <div class="mb-3">
@@ -217,7 +157,6 @@
             <ul>
                 <li><strong>Games in database:</strong> @cachedGameCount</li>
                 <li><strong>Rounds in database:</strong> @cachedRoundCount</li>
-                <li><strong>Games missing rounds:</strong> @gamesMissingRounds</li>
             </ul>
         </div>
     </div>
@@ -235,20 +174,13 @@
     private string tokenError = "";
 
     private bool isLoading = false;
-    private string currentStep = "";
 
     private int throttleDelay = 100;
-    private DateTime refreshSinceDate = DateTime.Today;
-    private int gamesMissingRounds = 0;
-    private int currentRoundFetched = 0;
-    private List<string> missingGameIds = new();
-
+    private DateTime refreshSinceDate = DateTime.Today.AddDays(-14); // Default: 2 weeks ago
     private int cachedGameCount = 0;
     private int cachedRoundCount = 0;
 
-    private Message? newGamesMessage;
     private Message? refreshSinceMessage;
-    private Message? missingRoundsMessage;
 
     private void LoadBearerToken()
     {
@@ -268,59 +200,11 @@
             
             var allRounds = await DatabaseService.GetAllRoundsAsync();
             cachedRoundCount = allRounds.Values.Sum(r => r.Count);
-            
-            // Check for missing rounds
-            var gamesNeedingRounds = await MahjongService.GetGamesNeedingRoundsAsync();
-            gamesMissingRounds = gamesNeedingRounds.Count;
-            
-            // Get up to first 5 game IDs missing rounds
-            missingGameIds = gamesNeedingRounds.Take(5).ToList();
         }
         catch
         {
             cachedGameCount = 0;
             cachedRoundCount = 0;
-            gamesMissingRounds = 0;
-            missingGameIds = new();
-        }
-    }
-
-    private async Task GetNewGames()
-    {
-        if (string.IsNullOrEmpty(bearerToken))
-        {
-            tokenError = "Bearer token is required";
-            return;
-        }
-
-        isLoading = true;
-        currentStep = "newGames";
-        newGamesMessage = null;
-
-        try
-        {
-            // Fetch new games
-            var newGames = await MahjongService.FetchAndSyncNewGamesAsync(bearerToken);
-            
-            if (newGames.Any())
-            {
-                newGamesMessage = new Message { Text = $"✓ Synced {newGames.Count} new game(s)", IsError = false };
-            }
-            else
-            {
-                newGamesMessage = new Message { Text = "No new games found", IsError = false };
-            }
-
-            await UpdateCacheStats();
-        }
-        catch (Exception ex)
-        {
-            newGamesMessage = new Message { Text = $"Error: {ex.Message}", IsError = true };
-        }
-        finally
-        {
-            isLoading = false;
-            currentStep = "";
         }
     }
 
@@ -333,16 +217,29 @@
         }
 
         isLoading = true;
-        currentStep = "refreshSince";
         refreshSinceMessage = null;
 
         try
         {
+            // Step 1: Refresh games
+            refreshSinceMessage = new Message { Text = $"Refreshing games since {refreshSinceDate:yyyy-MM-dd}...", IsError = false };
+            StateHasChanged();
+            
             var refreshedGames = await MahjongService.SyncGamesFromDateAsync(refreshSinceDate, bearerToken);
             
+            // Step 2: Automatically fetch missing rounds
+            refreshSinceMessage = new Message { Text = $"Fetched {refreshedGames.Count} game(s). Now fetching missing rounds...", IsError = false };
+            StateHasChanged();
+            
+            var (syncedGameIds, totalRounds) = await MahjongService.SyncAllMissingRoundsAsync(bearerToken, throttleDelayMs: throttleDelay);
+            
+            // Final message
             if (refreshedGames.Any())
             {
-                refreshSinceMessage = new Message { Text = $"✓ Refreshed {refreshedGames.Count} game(s) since {refreshSinceDate:yyyy-MM-dd}", IsError = false };
+                refreshSinceMessage = new Message { 
+                    Text = $"✓ Refreshed {refreshedGames.Count} game(s) and {totalRounds} rounds since {refreshSinceDate:yyyy-MM-dd}", 
+                    IsError = false 
+                };
             }
             else
             {
@@ -358,46 +255,6 @@
         finally
         {
             isLoading = false;
-            currentStep = "";
-        }
-    }
-
-    private async Task GetMissingRounds()
-    {
-        if (string.IsNullOrEmpty(bearerToken))
-        {
-            tokenError = "Bearer token is required";
-            return;
-        }
-
-        isLoading = true;
-        currentStep = "missingRounds";
-        missingRoundsMessage = null;
-
-        try
-        {
-            // Sync all games missing rounds
-            var (syncedGameIds, totalRounds) = await MahjongService.SyncAllMissingRoundsAsync(bearerToken, throttleDelayMs: throttleDelay);
-            
-            if (!syncedGameIds.Any())
-            {
-                missingRoundsMessage = new Message { Text = "All games already have their rounds", IsError = false };
-            }
-            else
-            {
-                missingRoundsMessage = new Message { Text = $"✓ Fetched {totalRounds} rounds for {syncedGameIds.Count} game(s)", IsError = false };
-            }
-
-            await UpdateCacheStats();
-        }
-        catch (Exception ex)
-        {
-            missingRoundsMessage = new Message { Text = $"Error: {ex.Message}", IsError = true };
-        }
-        finally
-        {
-            isLoading = false;
-            currentStep = "";
         }
     }
 
