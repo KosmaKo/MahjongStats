@@ -3,6 +3,8 @@
 @using MahjongStats.Models
 @using MahjongStats.Services
 @using MahjongStats.Components.Pages.GameComponents
+@using MahjongStats.Components.Pages.GameComponents
+@using Microsoft.AspNetCore.Components
 @inject IGameFilterService FilterService
 @inject IPlayerStatsService StatsService
 @inject IDatabaseService DatabaseService
@@ -93,8 +95,32 @@
     private bool isOverallResultsExpanded = true;
     private bool isGamesListExpanded = true;
 
-    private DateTime? minDateFilter;
-    private DateTime? maxDateFilter;
+    private DateTime? minDateFilterBacking;
+    private DateTime? maxDateFilterBacking;
+    public DateTime? minDateFilter
+    {
+        get => minDateFilterBacking;
+        set
+        {
+            if (minDateFilterBacking != value)
+            {
+                minDateFilterBacking = value;
+                StateHasChanged();
+            }
+        }
+    }
+    public DateTime? maxDateFilter
+    {
+        get => maxDateFilterBacking;
+        set
+        {
+            if (maxDateFilterBacking != value)
+            {
+                maxDateFilterBacking = value;
+                StateHasChanged();
+            }
+        }
+    }
     private List<string> playerFilters = new() { "", "", "", "" };
     private string filterSummary = "";
 

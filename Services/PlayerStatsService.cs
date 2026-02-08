@@ -108,7 +108,8 @@ namespace MahjongStats.Services
             stats.AveragePoints = pointsList.Count > 0 ? pointsList.Average() : 0;
             stats.YakitoriRate = stats.GamesPlayed > 0 ? (yakitoriCount * 100.0) / stats.GamesPlayed : 0;
             stats.DealInRate = totalRoundsPlayed > 0 ? (dealInCount * 100.0) / totalRoundsPlayed : 0;
-            stats.WinningRate = stats.GamesPlayed > 0 ? (winningGames * 100.0) / stats.GamesPlayed : 0;
+            // WinningRate: percentage of rounds won (ron or tsumo) out of total rounds played
+            stats.WinningRate = totalRoundsPlayed > 0 ? ((ronCount + tsumoCount) * 100.0) / totalRoundsPlayed : 0;
             stats.TsumoRateOnOya = oyaRoundCount > 0 ? (oyaEnemyTsumoCount * 100.0) / oyaRoundCount : 0;
             stats.ManganPlusTsumoRateOnOya = oyaEnemyTsumoCount > 0 ? (oyaTsumoManganCount * 100.0) / oyaEnemyTsumoCount : 0;
             stats.HanemanPlusTsumoRateOnOya = oyaEnemyTsumoCount > 0 ? (oyaTsumoHanemanCount * 100.0) / oyaEnemyTsumoCount : 0;

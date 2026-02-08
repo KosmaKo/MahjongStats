@@ -39,11 +39,11 @@
                     <label class="form-label">Date Range</label>
                     <div class="mb-2">
                         <label class="form-label small">Min Date (optional)</label>
-                        <input type="date" class="form-control" @bind="MinDateFilter" style="max-width: 250px;">
+                        <input type="date" class="form-control" value="@MinDateFilterString" @onchange="OnMinDateChanged" style="max-width: 250px;">
                     </div>
                     <div class="mb-2">
                         <label class="form-label small">Max Date (optional)</label>
-                        <input type="date" class="form-control" @bind="MaxDateFilter" style="max-width: 250px;">
+                        <input type="date" class="form-control" value="@MaxDateFilterString" @onchange="OnMaxDateChanged" style="max-width: 250px;">
                     </div>
                 </div>
             </div>
@@ -59,6 +59,24 @@
 </div>
 
 @code {
+    private string? MinDateFilterString => MinDateFilter.HasValue ? MinDateFilter.Value.ToString("yyyy-MM-dd") : null;
+    private string? MaxDateFilterString => MaxDateFilter.HasValue ? MaxDateFilter.Value.ToString("yyyy-MM-dd") : null;
+
+    private async Task OnMinDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+            await MinDateFilterChanged.InvokeAsync(date);
+        else
+            await MinDateFilterChanged.InvokeAsync(null);
+    }
+
+    private async Task OnMaxDateChanged(ChangeEventArgs e)
+    {
+        if (DateTime.TryParse(e.Value?.ToString(), out var date))
+            await MaxDateFilterChanged.InvokeAsync(date);
+        else
+            await MaxDateFilterChanged.InvokeAsync(null);
+    }
     [Parameter] public bool IsExpanded { get; set; } = true;
     [Parameter] public EventCallback<bool> IsExpandedChanged { get; set; }
     [Parameter] public List<string> PlayerFilters { get; set; } = new();

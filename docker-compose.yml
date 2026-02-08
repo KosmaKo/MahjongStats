@@ -1,14 +1,29 @@
 version: '3.8'
 
 services:
+  db:
+    image: postgres:15
+    restart: always
+    environment:
+      POSTGRES_DB: mahjongstats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
   mahjong-app:
     build: .
     ports:
       - "8080:80"
     environment:
       - ASPNETCORE_ENVIRONMENT=Production
-      - ConnectionStrings__DefaultConnection=Data Source=/app/data/MahjongStats.db
+      - DATABASE_URL=Host=db;Port=5432;Database=mahjongstats;Username=postgres;Password=postgres
       - MahjongTracker__ApiUrl=https://mahjongtracker.com/api/v1
-    volumes:
-      - ./data:/app/data
+    depends_on:
+      - db
     restart: unless-stopped
+
+volumes:
+  postgres_data:
